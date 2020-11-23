@@ -1,0 +1,19 @@
+name: ai
+channels:
+  - conda-forge
+  - defaults
+  - pytorch
+dependencies:
+  - python=3.8
+  - scipy
+  - numpy
+  - click
+  - tqdm
+  - pandas
+  - pytorch-lightning >= 1.0.0rc2
+  - pytorch
+  - torchvision >= 0.6.0
+  - pip:
+    - torchsummary
+    - easydict
+    - comet-ml

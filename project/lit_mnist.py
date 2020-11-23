@@ -1,7 +1,10 @@
 from argparse import ArgumentParser
+from configparser import ConfigParser
 
 import torch
 import pytorch_lightning as pl
+from easydict import EasyDict
+from pytorch_lightning.loggers import CometLogger
 from torch.nn import functional as F
 from torch.utils.data import DataLoader, random_split
 
@@ -33,13 +36,13 @@ class LitClassifier(pl.LightningModule):
         x, y = batch
         y_hat = self(x)
         loss = F.cross_entropy(y_hat, y)
-        self.log('valid_loss', loss)
+        self.log('valid_loss', loss, logger=True)
 
     def test_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self(x)
         loss = F.cross_entropy(y_hat, y)
-        self.log('test_loss', loss)
+        self.log('test_loss', loss, logger=True)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.hparams.learning_rate)
@@ -55,6 +58,8 @@ class LitClassifier(pl.LightningModule):
 def cli_main():
     pl.seed_everything(1234)
 
+    config = ConfigParser(dict_type=EasyDict)
+    config.read('config.ini')
     # ------------
     # args
     # ------------
@@ -83,7 +88,9 @@ def cli_main():
     # ------------
     # training
     # ------------
-    trainer = pl.Trainer.from_argparse_args(args)
+    logger = CometLogger(api_key=config._sections.cometml.apikey, project_name=config._sections.cometml.projectname,
+                         workspace=config._sections.cometml.workspace)
+    trainer = pl.Trainer.from_argparse_args(args, logger=logger)
     trainer.fit(model, train_loader, val_loader)
 
     # ------------
