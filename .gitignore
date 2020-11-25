@@ -30,8 +30,7 @@ MANIFEST
 test_tube_exp/
 tests/tests_tt_dir/
 tests/save_dir
-default/   
-data/
+default/
 test_tube_logs/
 test_tube_data/
 datasets/
