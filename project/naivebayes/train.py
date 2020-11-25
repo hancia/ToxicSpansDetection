@@ -37,6 +37,7 @@ print(f1_score(predicted, test_df['toxicity']))
 print(predicted.shape)
 
 print(classification_report(predicted, test_df['toxicity']))
+
 # Dla progu 0.5:
 # (1799564, 318216)
 # Counter({0: 1693559, 1: 106005})
