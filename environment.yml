@@ -5,20 +5,21 @@ channels:
   - pytorch
 dependencies:
   - python=3.8
+  - pytorch=1.5.0
+  - pytorch-lightning
+  - torchvision
   - scipy
   - numpy
   - click
   - tqdm
   - pandas
-  - pytorch-lightning >= 1.0.0rc2
-  - pytorch
-  - torchvision >= 0.6.0
   - nltk
-  - sklearn
+  - pip
   - pip:
-    - torchsummary
-    - easydict
-    - comet-ml
-    - datasets
-    - transofrmers
-    - shap
+      - torchsummary
+      - sklearn
+      - easydict
+      - comet-ml
+      - datasets
+      - transformers
+      - shap
