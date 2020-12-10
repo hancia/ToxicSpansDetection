@@ -79,5 +79,8 @@ class SemevalDataset(Dataset):
         return {
             'tokens': torch.tensor(row['pad_tokenized_text']),
             'attention_mask': torch.tensor(row['pad_attention_mask']),
-            'labels': torch.tensor(row['pad_spans'])
+            'labels': torch.tensor(row['pad_spans']),
+            'no_pad_id': torch.tensor(row['no_pad_id']),
+            'pad_offset_mapping': torch.tensor(row['pad_offset_mapping']),
+            'raw_spans': torch.tensor(row['raw_spans'])
         }

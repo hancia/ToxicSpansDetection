@@ -34,7 +34,7 @@ def train(**params):
         comet_config = EasyDict(config['cometml'])
         logger = CometLogger(api_key=comet_config.apikey, project_name=comet_config.projectname,
                              workspace=comet_config.workspace)
-        logger.experiment.set_code(filename='train/train.py', overwrite=True)
+        logger.experiment.set_code(filename='project/span_bert/train.py', overwrite=True)
         logger.log_hyperparams(params)
         callbacks.append(LearningRateMonitor(logging_interval='epoch'))
 

@@ -5,6 +5,8 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from transformers import BertForTokenClassification
 
+from span_bert.semeval_utils import f1_semeval
+
 
 class LitModule(pl.LightningModule):
 
@@ -42,13 +44,27 @@ class LitModule(pl.LightningModule):
         loss = outputs.loss
         self.log('val_loss', loss.item(), logger=True, on_step=False, on_epoch=True)
 
-        # logits = outputs.logits
-        # logits = logits.detach().cpu().numpy()
-        # label_ids = b_labels.to('cpu').numpy()
-        # pred_flat = np.argmax(preds, axis=-1).flatten().astype(int)
-        # labels_flat = label_ids.flatten().astype(int)
-        # f1 = f1_score(labels_flat, pred_flat)
-        # self.log('f1', f1, prog_bar=True, logger=True, on_step=False, on_epoch=True)
+        logits = outputs.logits.detach().cpu().numpy()
+        y_pred = np.argmax(logits, axis=-1).flatten().astype(int)
+
+        y_true = batch['labels'].to('cpu').numpy().flatten().astype(int)
+        no_pad_id = batch['no_pad_id'].to('cpu').numpy().flatten().astype(int)
+
+        y_pred = y_pred[no_pad_id]
+        y_true = y_true[no_pad_id]
+
+        f1 = f1_score(y_true, y_pred)
+        self.log('f1', f1, prog_bar=True, logger=True, on_step=False, on_epoch=True)
+
+        true_spans = batch['raw_spans'].to('cpu').numpy().flatten().astype(int)
+        pad_offset_mapping = batch['pad_offset_mapping'].to('cpu').numpy().squeeze().astype(int)
+        no_pad_all_offsets = pad_offset_mapping[no_pad_id]
+        predicted_offsets = no_pad_all_offsets[y_pred.astype(bool)]
+
+        pred_spans = [i for offset in predicted_offsets for i in range(offset[0], offset[1])]
+        semeval_f1 = f1_semeval(pred_spans, true_spans)
+
+        self.log('f1_spans', semeval_f1, prog_bar=True, logger=True, on_step=False, on_epoch=True)
 
     def configure_optimizers(self):
         optimizer = AdamW(self.model.parameters(), lr=2e-6, eps=1e-8)

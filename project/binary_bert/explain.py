@@ -1,37 +1,51 @@
-import shap
 import numpy as np
+import scipy as sp
+import shap
 import torch
 from datasets import load_dataset
 from tqdm.contrib import tenumerate
 
 from project.binary_bert.utils import load_binary_bert
 
-train = load_dataset("civil_comments", split='train')
-test = load_dataset("civil_comments", split='test')
-
 model, tokenizer, class_names = load_binary_bert()
 
-txts = []
-for id, batch in tenumerate(test, total=10):
-    if id > 10:
-        break
-    inputs = tokenizer(
-        batch['text'], return_tensors="pt", truncation=True, padding=True
-    )
-    txts.append(inputs['input_ids'].tolist())
 
-train_txt = []
-for id, batch in tenumerate(train, total=10):
-    if id > 10:
-        break
-    inputs = tokenizer(
-        batch['text'], return_tensors="pt", truncation=True, padding=True
-    )
-    train_txt.append(inputs['input_ids'].tolist())
+def get_tensor(split, size):
+    data = load_dataset("civil_comments", split=split)
+    result = list()
 
-model.eval()
-with torch.no_grad():
-    e = shap.DeepExplainer(model, torch.tensor(train_txt[0]))
-    shap_values = e.shap_values(torch.tensor(txts[0]))
+    for id, sample in tenumerate(data, total=size):
+        if id > size:
+            break
 
-print(shap_values)
+        result.append(sample['text'])
+
+    return result
+
+
+train = get_tensor('train', 1)
+test = get_tensor('test', 1)
+
+
+# define a prediction function
+
+def f(x):
+    tv = torch.tensor(
+        [tokenizer.encode(v, pad_to_max_length=True, max_length=500, truncation=True) for v in x])
+    outputs = model(tv)[0].detach().cpu().numpy()
+    scores = (np.exp(outputs).T / np.exp(outputs).sum(-1)).T
+    val = sp.special.logit(scores[:, 1])  # use one vs rest logit units
+    return val
+
+
+# build an explainer using a token masker
+explainer = shap.Explainer(f, tokenizer)
+
+# explain the model's predictions on IMDB reviews
+# imdb_train = nlp.load_dataset("imdb")["train"]
+shap_values = explainer(train)
+
+# e = shap.DeepExplainer(model, train)
+# shap_values = e.shap_values(test)
+#
+# print(shap_values)
