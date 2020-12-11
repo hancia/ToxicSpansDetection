@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 import torch
-from datasets import tqdm
 from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
 
 
 class DatasetModule(pl.LightningDataModule):
@@ -44,7 +44,7 @@ class DatasetModule(pl.LightningDataModule):
         texts, spans = df.text.values, df.spans
 
         data_list = list()
-        for sentence, span in tqdm(zip(texts, spans)):
+        for sentence, span in tqdm(zip(texts, spans), total=len(texts)):
             encoded = self.tokenizer.encode_plus(sentence, add_special_tokens=True, return_offsets_mapping=True,
                                                  padding='max_length', max_length=max_length)
             encoded_span = np.array([

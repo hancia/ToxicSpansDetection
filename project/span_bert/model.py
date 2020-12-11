@@ -5,7 +5,7 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from transformers import BertForTokenClassification
 
-from span_bert.semeval_utils import f1_semeval
+from semeval_utils import f1_semeval
 
 
 class LitModule(pl.LightningModule):

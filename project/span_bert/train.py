@@ -9,7 +9,7 @@ from pytorch_lightning.loggers import CometLogger
 from transformers import BertTokenizerFast
 
 from dataset import DatasetModule
-from span_bert.model import LitModule
+from model import LitModule
 
 
 @click.command()
@@ -19,7 +19,7 @@ from span_bert.model import LitModule
 @click.option('--freeze', is_flag=True, default=False, help='Freeze all layers in BERT except classifier')
 @click.option('-e', '--epochs', default=20, type=int)
 @click.option('--seed', default=0, type=int)
-@click.option('-bs', '--batch-size', default=32, type=int)
+@click.option('-bs', '--batch-size', default=1, type=int)
 @click.option('--data-cutoff', default=None, type=int,
               help='Number of data samples used in training and validation, used for local testing the code')
 def train(**params):
