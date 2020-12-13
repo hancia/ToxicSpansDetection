@@ -52,7 +52,8 @@ class DatasetModule(pl.LightningDataModule):
                 for left, right in encoded['offset_mapping']
             ])
             tokens = np.array(encoded.encodings[0].tokens)
-            padded_span = np.pad(span, mode='constant', pad_width=(0, self.max_length - len(span)), constant_values=-1)
+            padded_span = np.pad(span, mode='constant', pad_width=(0, 1024 - len(span)),
+                                 constant_values=-1)  # 994 is the longest input
             data_list.append([sentence, span, padded_span, encoded['input_ids'], encoded['attention_mask'],
                               encoded['offset_mapping'], encoded_span, tokens])
 

@@ -1,3 +1,4 @@
+import os
 from configparser import ConfigParser
 from pathlib import Path
 
@@ -11,12 +12,14 @@ from transformers import BertTokenizerFast
 from dataset import DatasetModule
 from model import LitModule
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 
 @click.command()
 @click.option('-n', '--name', required=True, type=str)
 @click.option('-dp', '--data-path', required=True, type=str)
 @click.option('--logger/--no-logger', default=True)
-@click.option('--freeze', is_flag=True, default=False, help='Freeze all layers in BERT except classifier')
+@click.option('--freeze/--no-freeze', is_flag=True, default=True, help='Freeze all layers in BERT except classifier')
 @click.option('-e', '--epochs', default=20, type=int)
 @click.option('--seed', default=0, type=int)
 @click.option('-bs', '--batch-size', default=1, type=int)
