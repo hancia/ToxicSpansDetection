@@ -46,7 +46,7 @@ class DatasetModule(pl.LightningDataModule):
         data_list = list()
         for sentence, span in tqdm(zip(texts, spans), total=len(texts)):
             encoded = self.tokenizer(sentence, add_special_tokens=True, padding='max_length',
-                                     max_length=self.max_length)
+                                     return_offset_mapping=True, max_length=self.max_length)
             encoded_span = np.array([
                 1 if any((left <= chr_pos < right for chr_pos in span)) else 0
                 for left, right in encoded['offset_mapping']
