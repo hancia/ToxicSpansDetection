@@ -51,11 +51,13 @@ class LitModule(pl.LightningModule):
         no_pad_id = batch['attention_mask'].to('cpu').numpy().astype('bool')
         # it takes into account special tokens but it should not affect results
 
-        y_pred_no_pad = y_pred[no_pad_id]
-        y_true_no_pad = y_true[no_pad_id]
-
-        f1 = f1_score(y_true_no_pad, y_pred_no_pad)
-        self.log('f1', f1, prog_bar=True, logger=True, on_step=False, on_epoch=True)
+        f1_avg = 0
+        for i in range(len(y_true)):
+            y_pred_no_pad = y_pred[i][no_pad_id[i]]
+            y_true_no_pad = y_true[i][no_pad_id[i]]
+            f1 = f1_score(y_true_no_pad, y_pred_no_pad)
+            f1_avg += f1 / len(batch)
+        self.log('f1', f1_avg, prog_bar=True, logger=True, on_step=False, on_epoch=True)
 
         pad_span = batch['pad_span'].to('cpu').numpy().flatten().astype(int)
         true_spans = list(set(pad_span) - {-1})  # remove padding
