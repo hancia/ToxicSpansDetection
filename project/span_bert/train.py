@@ -38,9 +38,9 @@ def train(**params):
         logger.log_hyperparams(params)
         callbacks.append(LearningRateMonitor(logging_interval='epoch'))
 
-    model_checkpoint = ModelCheckpoint(filepath='checkpoints/{epoch:02d}-{val_mae:.4f}', save_weights_only=True,
-                                       save_top_k=3, monitor='val_loss', period=1)
-    early_stop_callback = EarlyStopping(monitor='val_loss', min_delta=0.01, patience=10, verbose=True, mode='min')
+    model_checkpoint = ModelCheckpoint(filepath='checkpoints/{epoch:02d}-{f1_spans:.4f}', save_weights_only=True,
+                                       save_top_k=3, monitor='f1_spans', mode='max', period=1)
+    early_stop_callback = EarlyStopping(monitor='f1_spans', mode='max', min_delta=0.01, patience=10, verbose=True)
     callbacks.extend([model_checkpoint, early_stop_callback])
 
     tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased", do_lower_case=True)
@@ -48,8 +48,7 @@ def train(**params):
                                 cutoff=params.data_cutoff)
     model = LitModule(freeze=params.freeze)
 
-    trainer = Trainer(logger=logger, max_epochs=params['epochs'], callbacks=callbacks, gpus=1,
-                      deterministic=True)
+    trainer = Trainer(logger=logger, max_epochs=params['epochs'], callbacks=callbacks, gpus=1, deterministic=True)
     trainer.fit(model, datamodule=data_module)
 
     if params.logger:

@@ -45,21 +45,26 @@ class LitModule(pl.LightningModule):
         self.log('val_loss', loss.item(), logger=True, on_step=False, on_epoch=True)
 
         logits = outputs.logits.detach().cpu().numpy()
-        y_pred = np.argmax(logits, axis=-1).flatten().astype(int)
+        y_pred = np.argmax(logits, axis=-1).astype(int)
 
-        y_true = batch['labels'].to('cpu').numpy().flatten().astype(int)
-        no_pad_id = batch['no_pad_id'].to('cpu').numpy().flatten().astype(int)
+        y_true = batch['labels'].to('cpu').numpy().astype(int)
+        no_pad_id = batch['attention_mask'].to('cpu').numpy().astype('bool')
+        # it takes into account special tokens but it should not affect results
 
-        y_pred = y_pred[no_pad_id]
-        y_true = y_true[no_pad_id]
+        y_pred_no_pad = y_pred[no_pad_id]
+        y_true_no_pad = y_true[no_pad_id]
 
-        f1 = f1_score(y_true, y_pred)
+        f1 = f1_score(y_true_no_pad, y_pred_no_pad)
         self.log('f1', f1, prog_bar=True, logger=True, on_step=False, on_epoch=True)
 
-        true_spans = batch['raw_spans'].to('cpu').numpy().flatten().astype(int)
-        pad_offset_mapping = batch['pad_offset_mapping'].to('cpu').numpy().squeeze().astype(int)
-        no_pad_all_offsets = pad_offset_mapping[no_pad_id]
-        predicted_offsets = no_pad_all_offsets[y_pred.astype(bool)]
+        pad_span = batch['pad_span'].to('cpu').numpy().flatten().astype(int)
+        true_spans = list(set(pad_span) - {-1})  # remove padding
+
+        pad_offset_mapping = batch['pad_offset_mapping'].to('cpu').numpy().astype(int)
+
+        predicted_offsets = pad_offset_mapping[y_pred.astype(bool)]
+        # because of set used in f1 func we dont have to care about no_pad_id
+        # in worst case one token '0' will be counted ;)
 
         pred_spans = [i for offset in predicted_offsets for i in range(offset[0], offset[1])]
         semeval_f1 = f1_semeval(pred_spans, true_spans)
