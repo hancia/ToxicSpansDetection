@@ -19,7 +19,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 @click.option('-n', '--name', required=True, type=str)
 @click.option('-dp', '--data-path', required=True, type=str)
 @click.option('--logger/--no-logger', default=True)
-@click.option('--freeze/--no-freeze', is_flag=True, default=True, help='Freeze all layers in BERT except classifier')
+@click.option('--freeze/--no-freeze', is_flag=True, default=False, help='Freeze all layers in BERT except classifier')
 @click.option('-e', '--epochs', default=20, type=int)
 @click.option('--seed', default=0, type=int)
 @click.option('-bs', '--batch-size', default=1, type=int)

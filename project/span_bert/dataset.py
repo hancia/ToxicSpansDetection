@@ -59,8 +59,8 @@ class DatasetModule(pl.LightningDataModule):
 
         result_df = pd.DataFrame(
             data_list,
-            columns=['raw_text', 'raw_spans', 'pad_span', 'pad_tokenized_text', 'pad_attention_mask',
-                     'pad_offset_mapping', 'pad_spans', 'pad_tokens']
+            columns=['raw_text', 'raw_spans', 'pad_raw_spans', 'pad_tokenized_text', 'pad_attention_mask',
+                     'pad_offset_mapping', 'pad_encoded_span', 'pad_tokens']
         )
 
         return result_df
@@ -78,7 +78,7 @@ class SemevalDataset(Dataset):
         return {
             'tokens': torch.tensor(row['pad_tokenized_text']).long(),
             'attention_mask': torch.tensor(row['pad_attention_mask']).long(),
-            'labels': torch.tensor(row['pad_spans']).long(),
+            'labels': torch.tensor(row['pad_encoded_span']).long(),
             'pad_offset_mapping': torch.tensor(row['pad_offset_mapping']).long(),
-            'pad_span': torch.tensor(row['pad_span']).long()
+            'pad_span': torch.tensor(row['pad_raw_spans']).long()
         }
