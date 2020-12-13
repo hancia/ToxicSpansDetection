@@ -59,17 +59,19 @@ class LitModule(pl.LightningModule):
             f1_avg += f1 / len(batch)
         self.log('f1', f1_avg, prog_bar=True, logger=True, on_step=False, on_epoch=True)
 
-        pad_span = batch['pad_span'].to('cpu').numpy().flatten().astype(int)
-        true_spans = list(set(pad_span) - {-1})  # remove padding
-
+        pad_span = batch['pad_span'].to('cpu').numpy().astype(int)
         pad_offset_mapping = batch['pad_offset_mapping'].to('cpu').numpy().astype(int)
 
-        predicted_offsets = pad_offset_mapping[y_pred.astype(bool)]
-        # because of set used in f1 func we dont have to care about no_pad_id
-        # in worst case one token '0' will be counted ;)
+        semeval_f1 = 0
+        for i in range(len(y_true)):
+            true_spans = list(set(pad_span[i]) - {-1})  # remove padding
+            predicted_offsets = pad_offset_mapping[i][y_pred[i].astype(bool)]
+            pred_spans = [i for offset in predicted_offsets for i in range(offset[0], offset[1])]
+            # because of set used in f1 func we dont have to care about no_pad_id
+            # in worst case one token '0' will be counted ;) but attention mask can be used here
 
-        pred_spans = [i for offset in predicted_offsets for i in range(offset[0], offset[1])]
-        semeval_f1 = f1_semeval(pred_spans, true_spans)
+            semeval_f1 = f1_semeval(pred_spans, true_spans)
+            semeval_f1 += semeval_f1 / len(batch)
 
         self.log('f1_spans', semeval_f1, prog_bar=True, logger=True, on_step=False, on_epoch=True)
 
