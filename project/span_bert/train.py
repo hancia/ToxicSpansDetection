@@ -7,12 +7,12 @@ from easydict import EasyDict
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, EarlyStopping
 from pytorch_lightning.loggers import CometLogger
-from transformers import BertTokenizerFast
+from transformers import BertTokenizerFast, AlbertTokenizer
 
 from dataset import DatasetModule
 from model import LitModule
 
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 
 
 @click.command()
@@ -25,6 +25,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 @click.option('-bs', '--batch-size', default=1, type=int)
 @click.option('--data-cutoff', default=None, type=int,
               help='Number of data samples used in training and validation, used for local testing the code')
+@click.option('-m', '--model', type=click.Choice(['bert', 'albert']), default='bert')
 def train(**params):
     params = EasyDict(params)
     seed_everything(params.seed)
@@ -46,10 +47,11 @@ def train(**params):
     early_stop_callback = EarlyStopping(monitor='f1_spans', mode='max', min_delta=0.01, patience=10, verbose=True)
     callbacks.extend([model_checkpoint, early_stop_callback])
 
-    tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased", do_lower_case=True)
+    tokenizer = BertTokenizerFast.from_pretrained('bert-base-uncased', do_lower_case=True)
+
     data_module = DatasetModule(data_dir=params.data_path, tokenizer=tokenizer, batch_size=params.batch_size,
                                 cutoff=params.data_cutoff)
-    model = LitModule(freeze=params.freeze)
+    model = LitModule(freeze=params.freeze, model=params.model)
 
     trainer = Trainer(logger=logger, max_epochs=params['epochs'], callbacks=callbacks, gpus=1, deterministic=True)
     trainer.fit(model, datamodule=data_module)

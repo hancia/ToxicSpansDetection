@@ -3,21 +3,32 @@ import pytorch_lightning as pl
 from sklearn.metrics import f1_score
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from transformers import BertForTokenClassification
+from transformers import BertForTokenClassification, AlbertForTokenClassification
 
 from semeval_utils import f1_semeval
 
 
 class LitModule(pl.LightningModule):
 
-    def __init__(self, freeze=False, *args, **kwargs):
+    def __init__(self, freeze=False, model='bert', *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.model = BertForTokenClassification.from_pretrained('bert-base-uncased', num_labels=2,
-                                                                output_attentions=False, output_hidden_states=False)
-        if freeze:
-            for name, param in self.model.bert.named_parameters():
-                if 'classifier' not in name:
-                    param.requires_grad = False
+
+        self.model = None
+        if model == 'bert':
+            self.model = BertForTokenClassification.from_pretrained('bert-base-uncased', num_labels=2,
+                                                                    output_attentions=False, output_hidden_states=False)
+            if freeze:
+                for name, param in self.model.bert.named_parameters():
+                    if 'classifier' not in name:
+                        param.requires_grad = False
+        else:
+            self.model = AlbertForTokenClassification.from_pretrained('albert-base-v1', num_labels=2,
+                                                                      output_attentions=False,
+                                                                      output_hidden_states=False)
+            if freeze:
+                for name, param in self.model.albert.named_parameters():
+                    if 'classifier' not in name:
+                        param.requires_grad = False
 
     def forward(self, *args, **kwargs):
         pred = self.model(*args, **kwargs)
@@ -51,29 +62,34 @@ class LitModule(pl.LightningModule):
         no_pad_id = batch['attention_mask'].to('cpu').numpy().astype('bool')
         # it takes into account special tokens but it should not affect results
 
-        f1_avg = 0
+        f1_avg = list()
+        f1_pad_avg = list()
         for i in range(len(y_true)):
             y_pred_no_pad = y_pred[i][no_pad_id[i]]
             y_true_no_pad = y_true[i][no_pad_id[i]]
             f1 = f1_score(y_true_no_pad, y_pred_no_pad)
-            f1_avg += f1 / len(batch)
-        self.log('f1', f1_avg, prog_bar=True, logger=True, on_step=False, on_epoch=True)
+            f1_avg.append(f1)
+            f1_pad_avg.append(f1_score(y_pred[i], y_true[i]))
+
+        self.log('f1', np.mean(np.array(f1_avg)), prog_bar=True, logger=True, on_step=False, on_epoch=True)
+        self.log('f1_pad', np.mean(np.array(f1_pad_avg)), prog_bar=True, logger=True, on_step=False, on_epoch=True)
 
         pad_span = batch['pad_span'].to('cpu').numpy().astype(int)
         pad_offset_mapping = batch['pad_offset_mapping'].to('cpu').numpy().astype(int)
 
-        semeval_f1 = 0
+        f1_semeval_avg = list()
         for i in range(len(y_true)):
             true_spans = list(set(pad_span[i]) - {-1})  # remove padding
             predicted_offsets = pad_offset_mapping[i][y_pred[i].astype(bool)]
-            pred_spans = [i for offset in predicted_offsets for i in range(offset[0], offset[1])]
+            predicted_spans = [i for offset in predicted_offsets for i in range(offset[0], offset[1])]
             # because of set used in f1 func we dont have to care about no_pad_id
             # in worst case one token '0' will be counted ;) but attention mask can be used here
 
-            semeval_f1 = f1_semeval(pred_spans, true_spans)
-            semeval_f1 += semeval_f1 / len(batch)
+            f1 = f1_semeval(predicted_spans, true_spans)
+            f1_semeval_avg.append(f1)
 
-        self.log('f1_spans', semeval_f1, prog_bar=True, logger=True, on_step=False, on_epoch=True)
+        self.log('f1_spans', np.mean(np.array(f1_semeval_avg)), prog_bar=True, logger=True, on_step=False,
+                 on_epoch=True)
 
     def configure_optimizers(self):
         optimizer = AdamW(self.model.parameters(), lr=2e-6, eps=1e-8)
