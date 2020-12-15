@@ -10,26 +10,10 @@ from semeval_utils import f1_semeval
 
 class LitModule(pl.LightningModule):
 
-    def __init__(self, freeze=False, model='bert', *args, **kwargs):
+    def __init__(self, model, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.model = None
-        if model == 'bert':
-            self.model = BertForTokenClassification.from_pretrained('bert-base-uncased', num_labels=2,
-                                                                    output_attentions=False, output_hidden_states=False)
-            if freeze:
-                for name, param in self.model.bert.named_parameters():
-                    if 'classifier' not in name:
-                        param.requires_grad = False
-        else:
-            self.model = AlbertForTokenClassification.from_pretrained('albert-base-v1', num_labels=2,
-                                                                      output_attentions=False,
-                                                                      output_hidden_states=False)
-            if freeze:
-                for name, param in self.model.albert.named_parameters():
-                    if 'classifier' not in name:
-                        param.requires_grad = False
-
+        self.model = model
+        print('test')
     def forward(self, *args, **kwargs):
         pred = self.model(*args, **kwargs)
         return pred
@@ -92,8 +76,8 @@ class LitModule(pl.LightningModule):
                  on_epoch=True)
 
     def configure_optimizers(self):
-        optimizer = AdamW(self.model.parameters(), lr=2e-6, eps=1e-8)
-        scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, verbose=True)
+        optimizer = AdamW(self.model.parameters(), lr=2e-5, eps=1e-8)
+        scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=1, verbose=True)
         return {
             'optimizer': optimizer,
             'lr_scheduler': scheduler,

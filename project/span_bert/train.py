@@ -7,7 +7,8 @@ from easydict import EasyDict
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, EarlyStopping
 from pytorch_lightning.loggers import CometLogger
-from transformers import BertTokenizerFast, AlbertTokenizer
+from transformers import BertTokenizerFast, BertForTokenClassification, MobileBertTokenizerFast, \
+    MobileBertForTokenClassification, SqueezeBertTokenizerFast, SqueezeBertForTokenClassification
 
 from dataset import DatasetModule
 from model import LitModule
@@ -18,14 +19,13 @@ os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 @click.command()
 @click.option('-n', '--name', required=True, type=str)
 @click.option('-dp', '--data-path', required=True, type=str)
+@click.option('-m', '--model', default='bert', type=click.Choice(['bert', 'mobilebert', 'squeezebert']))
 @click.option('--logger/--no-logger', default=True)
-@click.option('--freeze/--no-freeze', is_flag=True, default=False, help='Freeze all layers in BERT except classifier')
 @click.option('-e', '--epochs', default=20, type=int)
 @click.option('--seed', default=0, type=int)
 @click.option('-bs', '--batch-size', default=1, type=int)
 @click.option('--data-cutoff', default=None, type=int,
               help='Number of data samples used in training and validation, used for local testing the code')
-@click.option('-m', '--model', type=click.Choice(['bert', 'albert']), default='bert')
 def train(**params):
     params = EasyDict(params)
     seed_everything(params.seed)
@@ -47,11 +47,19 @@ def train(**params):
     early_stop_callback = EarlyStopping(monitor='f1_spans', mode='max', min_delta=0.01, patience=10, verbose=True)
     callbacks.extend([model_checkpoint, early_stop_callback])
 
-    tokenizer = BertTokenizerFast.from_pretrained('bert-base-uncased', do_lower_case=True)
+    model_data = {
+        'bert': [BertForTokenClassification, BertTokenizerFast, 'bert-base-uncased'],
+        'mobilebert': [MobileBertForTokenClassification, MobileBertTokenizerFast, 'google/mobilebert-uncased'],
+        'squeezebert' : [SqueezeBertForTokenClassification, SqueezeBertTokenizerFast, 'squeezebert/squeezebert-mnli-headless']
+    }
+    model_class, tokenizer_class, model_name = model_data[params.model]
+    tokenizer = tokenizer_class.from_pretrained(model_name, do_lower_case=True)
+    model_backbone = model_class.from_pretrained(model_name, num_labels=2, output_attentions=False,
+                                                 output_hidden_states=False)
 
     data_module = DatasetModule(data_dir=params.data_path, tokenizer=tokenizer, batch_size=params.batch_size,
                                 cutoff=params.data_cutoff)
-    model = LitModule(freeze=params.freeze, model=params.model)
+    model = LitModule(model=model_backbone)
 
     trainer = Trainer(logger=logger, max_epochs=params['epochs'], callbacks=callbacks, gpus=1, deterministic=True)
     trainer.fit(model, datamodule=data_module)
