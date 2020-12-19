@@ -26,7 +26,10 @@ First, install dependencies
 ```bash
 conda env create --file environment.yml
  ```   
-
+or
+```bash
+conda env update --file environment.yml
+ ```   
 `config.ini`
 ```ini
 [cometml]
