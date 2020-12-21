@@ -1,7 +1,11 @@
 Dummy: https://github.com/plutasnyy/Interpretable-Attention/blob/master/random_classifier.py
+
 Naive Bayes: project/naivebayes/
+
 Ortho LSTM: https://github.com/plutasnyy/Interpretable-Attention
+
 BERT: project/span_bert/
+
 SHAP: project/binary_bert/ https://colab.research.google.com/drive/1E1Xav2b2tJUbZ7cVLYxw-Mqu4fafXsdu?usp=sharing
   
 
