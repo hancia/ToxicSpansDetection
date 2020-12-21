@@ -26,7 +26,10 @@ First, install dependencies
 ```bash
 conda env create --file environment.yml
  ```   
-
+or
+```bash
+conda env update --file environment.yml
+ ```   
 `config.ini`
 ```ini
 [cometml]
@@ -34,3 +37,6 @@ apikey = mySecretKey
 projectname = myProjectName
 workspace = workspaceName
 ```
+
+Minimal BERT-SPAN params to locally run:
+`--no-logger --data-path data/spans --name test --data-cutoff 10 --batch-size 1 --epochs 1 --model bert`
