@@ -3,17 +3,39 @@ import pytorch_lightning as pl
 from sklearn.metrics import f1_score
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from transformers import BertForTokenClassification, AlbertForTokenClassification
+from transformers import SqueezeBertForTokenClassification
 
 from semeval_utils import f1_semeval
 
 
 class LitModule(pl.LightningModule):
 
-    def __init__(self, model, *args, **kwargs):
+    def __init__(self, model, freeze, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.model = model
-        print('test')
+
+        if freeze > 0:
+            for name, param in self.model.base_model.embeddings.named_parameters():
+                if 'classifier' not in name:
+                    param.requires_grad = False
+
+            encoder = self.model.base_model.encoder
+            encoder_layers = encoder.layers \
+                if isinstance(self.model, SqueezeBertForTokenClassification) \
+                else encoder.layer
+
+            layers_size = len(encoder_layers)
+            freeze_layers = int(layers_size * freeze)
+            print(f'Freeze {freeze_layers}/{layers_size}')
+
+            for name, param in encoder_layers[:freeze_layers].named_parameters():
+                if 'classifier' not in name:
+                    param.requires_grad = False
+
+        train_params = sum([np.prod(p.size()) for p in filter(lambda p: p.requires_grad, self.model.parameters())])
+        all_params = sum([np.prod(p.size()) for p in self.model.parameters()])
+        print(f'Train {train_params / all_params:.4%} params')
+
     def forward(self, *args, **kwargs):
         pred = self.model(*args, **kwargs)
         return pred

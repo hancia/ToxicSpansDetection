@@ -22,6 +22,7 @@ os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 @click.option('-m', '--model', default='bert', type=click.Choice(['bert', 'mobilebert', 'squeezebert']))
 @click.option('--logger/--no-logger', default=True)
 @click.option('-e', '--epochs', default=20, type=int)
+@click.option('-f', '--freeze', default=0.5, type=float)
 @click.option('--seed', default=0, type=int)
 @click.option('-bs', '--batch-size', default=1, type=int)
 @click.option('--data-cutoff', default=None, type=int,
@@ -38,7 +39,7 @@ def train(**params):
         comet_config = EasyDict(config['cometml'])
         logger = CometLogger(api_key=comet_config.apikey, project_name=comet_config.projectname,
                              workspace=comet_config.workspace)
-        logger.experiment.set_code(filename='project/span_bert/train.py', overwrite=True)
+        logger.experiment.set_code(filename='projectq/span_bert/train.py', overwrite=True)
         logger.log_hyperparams(params)
         callbacks.append(LearningRateMonitor(logging_interval='epoch'))
 
@@ -50,7 +51,8 @@ def train(**params):
     model_data = {
         'bert': [BertForTokenClassification, BertTokenizerFast, 'bert-base-uncased'],
         'mobilebert': [MobileBertForTokenClassification, MobileBertTokenizerFast, 'google/mobilebert-uncased'],
-        'squeezebert' : [SqueezeBertForTokenClassification, SqueezeBertTokenizerFast, 'squeezebert/squeezebert-mnli-headless']
+        'squeezebert': [SqueezeBertForTokenClassification, SqueezeBertTokenizerFast,
+                        'squeezebert/squeezebert-mnli-headless']
     }
     model_class, tokenizer_class, model_name = model_data[params.model]
     tokenizer = tokenizer_class.from_pretrained(model_name, do_lower_case=True)
@@ -59,7 +61,7 @@ def train(**params):
 
     data_module = DatasetModule(data_dir=params.data_path, tokenizer=tokenizer, batch_size=params.batch_size,
                                 cutoff=params.data_cutoff)
-    model = LitModule(model=model_backbone)
+    model = LitModule(model=model_backbone, freeze=params.freeze)
 
     trainer = Trainer(logger=logger, max_epochs=params['epochs'], callbacks=callbacks, gpus=1, deterministic=True)
     trainer.fit(model, datamodule=data_module)
