@@ -5,7 +5,7 @@ from tqdm import tqdm
 from transformers import BertTokenizerFast
 
 
-def split_sentence(tokenizer, text, spans=None, max_sentence_length=110):
+def split_sentence(tokenizer, text, spans=None, max_sentence_length=500):
     encoded = tokenizer(text, add_special_tokens=True, return_offsets_mapping=True)
     sentences_offsets = [offset[1] for input_ids, offset in zip(encoded['input_ids'], encoded['offset_mapping'])
                          if input_ids == 1012]
@@ -40,7 +40,7 @@ def split_sentence(tokenizer, text, spans=None, max_sentence_length=110):
 
 
 if __name__ == '__main__':
-    df = pd.read_csv('data/spans/tsd_trial.csv')
+    df = pd.read_csv('data/spans/tsd_train.csv')
     df.loc[:, 'spans'] = df['spans'].apply(literal_eval)
     pd.set_option('display.max_columns', 500)
     tokenizer = BertTokenizerFast.from_pretrained('bert-base-uncased', do_lower_case=True)
@@ -71,4 +71,4 @@ if __name__ == '__main__':
     })
 
     print(new_df.head())
-    new_df.to_csv('data/spans/tsd_trial_128.csv', index=False)
+    new_df.to_csv('data/spans/tsd_train_500.csv', index=False)
