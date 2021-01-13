@@ -112,6 +112,7 @@ class LitModule(pl.LightningModule):
         for sentence_id in result_spans:
             f1 = f1_semeval(result_spans[sentence_id]['true'], result_spans[sentence_id]['pred'])
             f1_semeval_avg.append(f1)
+
         self.log('f1_spans_sentence', np.mean(np.array(f1_semeval_avg)), prog_bar=True, logger=True)
 
     def test_step(self, *args, **kwargs):

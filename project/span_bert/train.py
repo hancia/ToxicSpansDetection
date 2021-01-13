@@ -84,7 +84,7 @@ def train(**params):
             predicted_spans = list()
             for text, offset in zip(texts, offsets):
                 encoded = tokenizer(text, add_special_tokens=True, padding='max_length', truncation=True,
-                                    return_offsets_mapping=True, max_length=512)
+                                    return_offsets_mapping=True, max_length=128)
                 item = {k: torch.tensor(v).unsqueeze(0).long().cuda() for k, v in encoded.items()}
 
                 output = best_model(item['input_ids'], token_type_ids=None, attention_mask=item['attention_mask'])
