@@ -80,7 +80,7 @@ def train(**params):
         best_model.eval()
         best_model.cuda()
         for i, row in data_module.test_df.iterrows():
-            texts, offsets, _ = split_sentence(tokenizer, row['text'], max_sentence_length=500)
+            texts, offsets, _ = split_sentence(tokenizer, row['text'], max_sentence_length=110)
             predicted_spans = list()
             for text, offset in zip(texts, offsets):
                 encoded = tokenizer(text, add_special_tokens=True, padding='max_length', truncation=True,
@@ -93,7 +93,7 @@ def train(**params):
                 predicted_offsets = np.array(encoded['offset_mapping'])[y_pred.astype(bool)]
                 spans = [i for offset in predicted_offsets for i in range(offset[0], offset[1])]
                 spans = np.array(spans) + offset
-                predicted_spans.extend(spans)
+                predicted_spans.extend(list(spans))
             data_module.test_df.loc[i, 'spans'] = str(predicted_spans)
 
         print(data_module.test_df.head())

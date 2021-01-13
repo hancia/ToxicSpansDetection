@@ -31,7 +31,7 @@ class DatasetModule(pl.LightningDataModule):
 
     def val_dataloader(self):
         return DataLoader(SemevalDataset(self.val_df, tokenizer=self.tokenizer), num_workers=8,
-                          batch_size=self.batch_size, shuffle=True)
+                          batch_size=self.batch_size, shuffle=False)
 
 
 class SemevalDataset(Dataset):
