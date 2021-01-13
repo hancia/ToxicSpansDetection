@@ -14,6 +14,7 @@ from dataset import DatasetModule
 from model import LitModule
 
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+os.environ['COMET_DISABLE_AUTO_LOGGING'] = '1'
 
 
 @click.command()
@@ -21,12 +22,11 @@ os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 @click.option('-dp', '--data-path', required=True, type=str)
 @click.option('-m', '--model', default='bert', type=click.Choice(['bert', 'mobilebert', 'squeezebert']))
 @click.option('--logger/--no-logger', default=True)
-@click.option('-e', '--epochs', default=3, type=int)
+@click.option('-e', '--epochs', default=4, type=int)
 @click.option('-f', '--freeze', default=0, type=float)
 @click.option('--seed', default=0, type=int)
 @click.option('-bs', '--batch-size', default=32, type=int)
-@click.option('--data-cutoff', default=None, type=int,
-              help='Number of data samples used in training and validation, used for local testing the code')
+@click.option('-fdr', '--fast-dev-run', default=False, is_flag=True)
 def train(**params):
     params = EasyDict(params)
     seed_everything(params.seed)
@@ -43,10 +43,10 @@ def train(**params):
         logger.log_hyperparams(params)
         callbacks.append(LearningRateMonitor(logging_interval='epoch'))
 
-    model_checkpoint = ModelCheckpoint(filepath='checkpoints/{epoch:02d}-{f1_spans:.4f}', save_weights_only=True,
-                                       save_top_k=3, monitor='f1_spans', mode='max', period=1)
-    early_stop_callback = EarlyStopping(monitor='f1_spans', mode='max', min_delta=0.01, patience=10, verbose=True)
-    callbacks.extend([model_checkpoint, early_stop_callback])
+    model_checkpoint = ModelCheckpoint(filepath='checkpoints/{epoch:02d}-{f1_spans:.4f}-{f1_spans_sentence:.4f}',
+                                       save_weights_only=True, save_top_k=3, monitor='f1_spans_sentence', mode='max',
+                                       period=1)
+    callbacks.extend([model_checkpoint])
 
     model_data = {
         'bert': [BertForTokenClassification, BertTokenizerFast, 'bert-base-uncased'],
@@ -59,17 +59,19 @@ def train(**params):
     model_backbone = model_class.from_pretrained(model_name, num_labels=2, output_attentions=False,
                                                  output_hidden_states=False)
 
-    data_module = DatasetModule(data_dir=params.data_path, tokenizer=tokenizer, batch_size=params.batch_size,
-                                cutoff=params.data_cutoff)
+    data_module = DatasetModule(data_dir=params.data_path, tokenizer=tokenizer, batch_size=params.batch_size)
     model = LitModule(model=model_backbone, tokenizer=tokenizer, freeze=params.freeze)
 
-    trainer = Trainer(logger=logger, max_epochs=params['epochs'], callbacks=callbacks, gpus=1, deterministic=True)
+    trainer = Trainer(logger=logger, max_epochs=params['epochs'], callbacks=callbacks, gpus=1, deterministic=True,
+                      val_check_interval=0.5, fast_dev_run=params.fast_dev_run)
     trainer.fit(model, datamodule=data_module)
 
     if params.logger:
         for absolute_path in model_checkpoint.best_k_models.keys():
             logger.experiment.log_model(Path(absolute_path).name, absolute_path)
         logger.log_metrics({'best_model_score': model_checkpoint.best_model_score.tolist()})
+
+
 
 
 if __name__ == '__main__':

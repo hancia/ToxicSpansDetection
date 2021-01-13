@@ -4,7 +4,7 @@ import numpy as np
 import pytorch_lightning as pl
 from sklearn.metrics import f1_score
 from torch.optim import AdamW
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from transformers import SqueezeBertForTokenClassification
 
 from semeval_utils import f1_semeval
@@ -95,7 +95,6 @@ class LitModule(pl.LightningModule):
             f1_semeval_avg.append(f1)
             result_spans[sentence_id[i]]['true'].extend(list(np.array(true_spans) + sentence_offset[i]))
             result_spans[sentence_id[i]]['pred'].extend(list(np.array(predicted_spans) + sentence_offset[i]))
-            print(sentence_id[i], true_spans, predicted_spans)
 
         self.log('f1_spans', np.mean(np.array(f1_semeval_avg)), prog_bar=True, logger=True, on_step=False,
                  on_epoch=True)
@@ -115,11 +114,14 @@ class LitModule(pl.LightningModule):
             f1_semeval_avg.append(f1)
         self.log('f1_spans_sentence', np.mean(np.array(f1_semeval_avg)), prog_bar=True, logger=True)
 
+    def test_step(self, *args, **kwargs):
+        print('*'*50)
+
     def configure_optimizers(self):
-        optimizer = AdamW(self.model.parameters(), lr=2e-5, eps=1e-8)
-        # scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=1, verbose=True)
+        optimizer = AdamW(self.model.parameters(), lr=4e-5, eps=1e-8)
+        scheduler = StepLR(optimizer, step_size=1, gamma=0.5)
         return {
             'optimizer': optimizer,
-            # 'lr_scheduler': scheduler,
+            'lr_scheduler': scheduler,
             'monitor': 'val_loss'
         }
