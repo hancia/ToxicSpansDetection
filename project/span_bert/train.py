@@ -45,6 +45,7 @@ def train(**params):
                              workspace=comet_config.workspace)
         logger.experiment.set_code(filename='project/span_bert/train.py', overwrite=True)
         logger.log_hyperparams(params)
+        logger.experiment.log_asset_folder('project/span_bert')
         callbacks.append(LearningRateMonitor(logging_interval='epoch'))
 
     model_checkpoint = ModelCheckpoint(filepath='checkpoints/{epoch:02d}-{f1_spans:.4f}-{f1_spans_sentence:.4f}',
