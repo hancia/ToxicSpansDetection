@@ -25,6 +25,7 @@ os.environ['COMET_DISABLE_AUTO_LOGGING'] = '1'
 @click.option('-n', '--name', required=True, type=str)
 @click.option('-dp', '--data-path', required=True, type=str)
 @click.option('-m', '--model', default='bert', type=click.Choice(['bert', 'mobilebert', 'squeezebert']))
+@click.option('-l', '--length', default=512, type=click.Choice([128, 512]))
 @click.option('--logger/--no-logger', default=True)
 @click.option('-e', '--epochs', default=4, type=int)
 @click.option('-f', '--freeze', default=0, type=float)
@@ -64,7 +65,8 @@ def train(**params):
     model_backbone = model_class.from_pretrained(model_name, num_labels=2, output_attentions=False,
                                                  output_hidden_states=False)
 
-    data_module = DatasetModule(data_dir=params.data_path, tokenizer=tokenizer, batch_size=params.batch_size)
+    data_module = DatasetModule(data_dir=params.data_path, tokenizer=tokenizer, batch_size=params.batch_size,
+                                length=params.length)
     model = LitModule(model=model_backbone, tokenizer=tokenizer, freeze=params.freeze)
 
     trainer = Trainer(logger=logger, max_epochs=params['epochs'], callbacks=callbacks, gpus=1, deterministic=True,
@@ -81,11 +83,11 @@ def train(**params):
         best_model.eval()
         best_model.cuda()
         for i, row in data_module.test_df.iterrows():
-            texts, offsets, _ = split_sentence(tokenizer, row['text'], max_sentence_length=500)
+            texts, offsets, _ = split_sentence(tokenizer, row['text'], max_sentence_length=params.length)
             predicted_spans = list()
             for text, offset in zip(texts, offsets):
                 encoded = tokenizer(text, add_special_tokens=True, padding='max_length', truncation=True,
-                                    return_offsets_mapping=True, max_length=512)
+                                    return_offsets_mapping=True, max_length=params.length)
                 item = {k: torch.tensor(v).unsqueeze(0).long().cuda() for k, v in encoded.items()}
 
                 output = best_model(item['input_ids'], token_type_ids=None, attention_mask=item['attention_mask'])
