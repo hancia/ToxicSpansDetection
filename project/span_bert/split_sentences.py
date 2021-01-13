@@ -26,7 +26,7 @@ def split_sentence(tokenizer, text, spans=None, max_sentence_length=500):
     texts, new_spans, offsets = [], [], []
     for offset_id in range(len(new_split) - 1):
         a, b = new_split[offset_id], new_split[offset_id + 1]
-        texts.append(row['text'][a:b])
+        texts.append(text[a:b])
         offsets.append(new_split[offset_id])
 
         if spans:

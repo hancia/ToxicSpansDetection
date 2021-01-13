@@ -1,17 +1,21 @@
+import csv
 import os
 from configparser import ConfigParser
 from pathlib import Path
 
 import click
+import numpy as np
+import torch
 from easydict import EasyDict
 from pytorch_lightning import Trainer, seed_everything
-from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, EarlyStopping
+from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from pytorch_lightning.loggers import CometLogger
 from transformers import BertTokenizerFast, BertForTokenClassification, MobileBertTokenizerFast, \
     MobileBertForTokenClassification, SqueezeBertTokenizerFast, SqueezeBertForTokenClassification
 
 from dataset import DatasetModule
 from model import LitModule
+from split_sentences import split_sentence
 
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 os.environ['COMET_DISABLE_AUTO_LOGGING'] = '1'
@@ -39,7 +43,7 @@ def train(**params):
         comet_config = EasyDict(config['cometml'])
         logger = CometLogger(api_key=comet_config.apikey, project_name=comet_config.projectname,
                              workspace=comet_config.workspace)
-        logger.experiment.set_code(filename='projectq/span_bert/train.py', overwrite=True)
+        logger.experiment.set_code(filename='project/span_bert/train.py', overwrite=True)
         logger.log_hyperparams(params)
         callbacks.append(LearningRateMonitor(logging_interval='epoch'))
 
@@ -71,7 +75,31 @@ def train(**params):
             logger.experiment.log_model(Path(absolute_path).name, absolute_path)
         logger.log_metrics({'best_model_score': model_checkpoint.best_model_score.tolist()})
 
+        best_model = LitModule(model=model_backbone, tokenizer=tokenizer).load_from_checkpoint(
+            checkpoint_path=model_checkpoint.best_model_path)
+        best_model.eval()
+        best_model.cuda()
+        for i, row in data_module.test_df.iterrows():
+            texts, offsets, _ = split_sentence(tokenizer, row['text'], max_sentence_length=500)
+            predicted_spans = list()
+            for text, offset in zip(texts, offsets):
+                encoded = tokenizer(text, add_special_tokens=True, padding='max_length', truncation=True,
+                                    return_offsets_mapping=True, max_length=512)
+                item = {k: torch.tensor(v).unsqueeze(0).long().cuda() for k, v in encoded.items()}
 
+                output = best_model(item['input_ids'], token_type_ids=None, attention_mask=item['attention_mask'])
+                logits = output.logits.detach().cpu().numpy()
+                y_pred = np.argmax(logits, axis=-1).squeeze().astype(int)
+                predicted_offsets = np.array(encoded['offset_mapping'])[y_pred.astype(bool)]
+                spans = [i for offset in predicted_offsets for i in range(offset[0], offset[1])]
+                spans = np.array(spans) + offset
+                predicted_spans.extend(spans)
+            data_module.test_df.loc[i, 'spans'] = str(predicted_spans)
+
+        print(data_module.test_df.head())
+        data_module.test_df = data_module.test_df.drop(columns=['text'])
+        data_module.test_df.to_csv('spans-pred.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='\n')
+        logger.experiment.log_asset('spans-pred.txt')
 
 
 if __name__ == '__main__':
