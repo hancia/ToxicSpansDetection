@@ -21,10 +21,10 @@ os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 @click.option('-dp', '--data-path', required=True, type=str)
 @click.option('-m', '--model', default='bert', type=click.Choice(['bert', 'mobilebert', 'squeezebert']))
 @click.option('--logger/--no-logger', default=True)
-@click.option('-e', '--epochs', default=20, type=int)
-@click.option('-f', '--freeze', default=0.5, type=float)
+@click.option('-e', '--epochs', default=3, type=int)
+@click.option('-f', '--freeze', default=0, type=float)
 @click.option('--seed', default=0, type=int)
-@click.option('-bs', '--batch-size', default=1, type=int)
+@click.option('-bs', '--batch-size', default=32, type=int)
 @click.option('--data-cutoff', default=None, type=int,
               help='Number of data samples used in training and validation, used for local testing the code')
 def train(**params):
@@ -61,7 +61,7 @@ def train(**params):
 
     data_module = DatasetModule(data_dir=params.data_path, tokenizer=tokenizer, batch_size=params.batch_size,
                                 cutoff=params.data_cutoff)
-    model = LitModule(model=model_backbone, freeze=params.freeze)
+    model = LitModule(model=model_backbone, tokenizer=tokenizer, freeze=params.freeze)
 
     trainer = Trainer(logger=logger, max_epochs=params['epochs'], callbacks=callbacks, gpus=1, deterministic=True)
     trainer.fit(model, datamodule=data_module)
