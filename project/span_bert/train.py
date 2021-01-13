@@ -80,11 +80,11 @@ def train(**params):
         best_model.eval()
         best_model.cuda()
         for i, row in data_module.test_df.iterrows():
-            texts, offsets, _ = split_sentence(tokenizer, row['text'], max_sentence_length=110)
+            texts, offsets, _ = split_sentence(tokenizer, row['text'], max_sentence_length=500)
             predicted_spans = list()
             for text, offset in zip(texts, offsets):
                 encoded = tokenizer(text, add_special_tokens=True, padding='max_length', truncation=True,
-                                    return_offsets_mapping=True, max_length=128)
+                                    return_offsets_mapping=True, max_length=512)
                 item = {k: torch.tensor(v).unsqueeze(0).long().cuda() for k, v in encoded.items()}
 
                 output = best_model(item['input_ids'], token_type_ids=None, attention_mask=item['attention_mask'])
