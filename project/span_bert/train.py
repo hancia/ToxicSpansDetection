@@ -75,8 +75,8 @@ def train(**params):
             logger.experiment.log_model(Path(absolute_path).name, absolute_path)
         logger.log_metrics({'best_model_score': model_checkpoint.best_model_score.tolist()})
 
-        best_model = LitModule(model=model_backbone, tokenizer=tokenizer).load_from_checkpoint(
-            checkpoint_path=model_checkpoint.best_model_path)
+        best_model = LitModule.load_from_checkpoint(checkpoint_path=model_checkpoint.best_model_path,
+                                                    model=model_backbone, tokenizer=tokenizer, freeze=params.freeze)
         best_model.eval()
         best_model.cuda()
         for i, row in data_module.test_df.iterrows():
