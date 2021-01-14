@@ -36,6 +36,7 @@ os.environ['COMET_DISABLE_AUTO_LOGGING'] = '1'
 @click.option('--seed', default=0, type=int)
 @click.option('-bs', '--batch-size', default=32, type=int)
 @click.option('-fdr', '--fast-dev-run', default=False, is_flag=True)
+@click.option('-sm', '--smoothing', default=False, is_flag=True)
 def train(**params):
     params = EasyDict(params)
     seed_everything(params.seed)
@@ -74,7 +75,7 @@ def train(**params):
                                                  output_hidden_states=False)
 
     data_module = DatasetModule(data_dir=params.data_path, tokenizer=tokenizer, batch_size=params.batch_size,
-                                length=params.length)
+                                length=params.length, smoothing=params.smoothing)
     model = LitModule(model=model_backbone, tokenizer=tokenizer, freeze=params.freeze)
 
     trainer = Trainer(logger=logger, max_epochs=params['epochs'], callbacks=callbacks, gpus=1, deterministic=True,
@@ -112,8 +113,11 @@ def train(**params):
         data_module.test_df.to_csv('spans-pred.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='\n')
         logger.experiment.log_asset('spans-pred.txt')
 
-        data_module.test_df['spans']  =data_module.test_df['spans'].apply(fill_holes_in_row)
-        data_module.test_df.to_csv('spans-pred-filled.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='\n')
+        data_module.test_df['spans'] = data_module.test_df['spans'].apply(fill_holes_in_row)
+        data_module.test_df.to_csv('spans-pred-filled.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE,
+                                   escapechar='\n')
         logger.experiment.log_asset('spans-pred-filled.txt')
+
+
 if __name__ == '__main__':
     train()
