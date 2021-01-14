@@ -11,7 +11,9 @@ from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from pytorch_lightning.loggers import CometLogger
 from transformers import BertTokenizerFast, BertForTokenClassification, MobileBertTokenizerFast, \
-    MobileBertForTokenClassification, SqueezeBertTokenizerFast, SqueezeBertForTokenClassification
+    MobileBertForTokenClassification, SqueezeBertTokenizerFast, SqueezeBertForTokenClassification, \
+    AlbertForTokenClassification, AlbertTokenizerFast, ElectraForTokenClassification, RobertaForTokenClassification, \
+    XLNetForTokenClassification, XLNetTokenizerFast, RobertaTokenizerFast, ElectraTokenizerFast
 
 from dataset import DatasetModule
 from model import LitModule
@@ -24,7 +26,8 @@ os.environ['COMET_DISABLE_AUTO_LOGGING'] = '1'
 @click.command()
 @click.option('-n', '--name', required=True, type=str)
 @click.option('-dp', '--data-path', required=True, type=str)
-@click.option('-m', '--model', default='bert', type=click.Choice(['bert', 'mobilebert', 'squeezebert']))
+@click.option('-m', '--model', default='bert',
+              type=click.Choice(['bert', 'mobilebert', 'squeezebert', 'albert', 'xlnet', 'roberta', 'electra']))
 @click.option('-l', '--length', default=512, type=click.Choice([128, 512]))
 @click.option('--logger/--no-logger', default=True)
 @click.option('-e', '--epochs', default=4, type=int)
@@ -56,6 +59,10 @@ def train(**params):
 
     model_data = {
         'bert': [BertForTokenClassification, BertTokenizerFast, 'bert-base-uncased'],
+        'albert': [AlbertForTokenClassification, AlbertTokenizerFast, 'albert-base-v2'],
+        'electra': [ElectraForTokenClassification, ElectraTokenizerFast, 'google/electra-small-discriminator'],
+        'roberta': [RobertaForTokenClassification, RobertaTokenizerFast, 'roberta-base'],
+        'xlnet': [XLNetForTokenClassification, XLNetTokenizerFast, 'xlnet-base-cased'],
         'mobilebert': [MobileBertForTokenClassification, MobileBertTokenizerFast, 'google/mobilebert-uncased'],
         'squeezebert': [SqueezeBertForTokenClassification, SqueezeBertTokenizerFast,
                         'squeezebert/squeezebert-mnli-headless']

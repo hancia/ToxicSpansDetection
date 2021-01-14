@@ -19,8 +19,8 @@ class DatasetModule(pl.LightningDataModule):
         self.train_df, self.val_df, self.test_df = None, None, None
 
     def prepare_data(self, *args, **kwargs):
-        self.train_df = pd.read_csv(str(self.data_dir / "tsd_train_" / str(self.length) / ".csv"))
-        self.val_df = pd.read_csv(str(self.data_dir / "tsd_trial_" / str(self.length) / ".csv"))
+        self.train_df = pd.read_csv(str(self.data_dir / f'tsd_train_{str(self.length)}.csv'))
+        self.val_df = pd.read_csv(str(self.data_dir / f'tsd_trial_{str(self.length)}.csv'))
         self.test_df = pd.read_csv(str(self.data_dir / "tsd_test.csv"))
 
         self.train_df.loc[:, 'spans'] = self.train_df['spans'].apply(literal_eval)
