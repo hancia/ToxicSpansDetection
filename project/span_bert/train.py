@@ -16,6 +16,7 @@ from transformers import BertTokenizerFast, BertForTokenClassification, MobileBe
     XLNetForTokenClassification, XLNetTokenizerFast, RobertaTokenizerFast, ElectraTokenizerFast
 
 from dataset import DatasetModule
+from fill_holes import fill_holes_in_row
 from model import LitModule
 from split_sentences import split_sentence
 
@@ -111,6 +112,8 @@ def train(**params):
         data_module.test_df.to_csv('spans-pred.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='\n')
         logger.experiment.log_asset('spans-pred.txt')
 
-
+        data_module.test_df['spans']  =data_module.test_df['spans'].apply(fill_holes_in_row)
+        data_module.test_df.to_csv('spans-pred-filled.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='\n')
+        logger.experiment.log_asset('spans-pred-filled.txt')
 if __name__ == '__main__':
     train()
