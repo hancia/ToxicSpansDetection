@@ -1,3 +1,4 @@
+import csv
 from ast import literal_eval
 from configparser import ConfigParser
 from io import StringIO
@@ -29,7 +30,6 @@ def get_preds_from_experiment(experiment):
 
     binary_file = experiment.get_asset(span_id, return_type='text')
     df = pd.read_table(StringIO(binary_file), sep="\t", header=None, names=['id', 'spans'], index_col='id')
-    df['spans'] = df['spans'].apply(literal_eval)
     return df
 
 
@@ -44,13 +44,22 @@ def get_api_and_experiment(experiment_id):
     return comet_api, experiment
 
 
-def fill_holes_in_row(spans):
-    sorted_spans = sorted(spans)
+def fill_holes_in_row(spans: str) -> str:
+    sorted_spans = sorted(literal_eval(spans))
     new_spans = []
-    if spans:
+    if sorted_spans and len(sorted_spans) > 1:
         for i in range(len(sorted_spans) - 1):
             new_spans.append(sorted_spans[i])
             if sorted_spans[i + 1] - sorted_spans[i] == 2:
                 new_spans.append(sorted_spans[i] + 1)
         new_spans.append(sorted_spans[-1])
-    return new_spans
+    return str(new_spans)
+
+
+def log_predicted_spans(df, logger):
+    df.to_csv('spans-pred.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='\n')
+    logger.experiment.log_asset('spans-pred.txt')
+
+    df['spans'] = df['spans'].apply(fill_holes_in_row)
+    df.to_csv('spans-pred-filled.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='\n')
+    logger.experiment.log_asset('spans-pred-filled.txt')

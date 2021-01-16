@@ -10,13 +10,12 @@ from torch.utils.data import DataLoader, Dataset
 
 class DatasetModule(pl.LightningDataModule):
 
-    def __init__(self, data_dir: str, tokenizer, batch_size=32, length=512, smoothing=False):
+    def __init__(self, data_dir: str, tokenizer, batch_size=32, length=512):
         super().__init__()
         self.data_dir: Path = Path(data_dir)
         self.tokenizer = tokenizer
         self.batch_size = batch_size
         self.length = length
-        self.smoothing = smoothing
         self.train_df, self.val_df, self.test_df = None, None, None
 
     def prepare_data(self, *args, **kwargs):
@@ -29,24 +28,20 @@ class DatasetModule(pl.LightningDataModule):
 
     def train_dataloader(self):
         return DataLoader(
-            SemevalDataset(self.train_df, tokenizer=self.tokenizer, length=self.length, smoothing=self.smoothing),
+            SemevalDataset(self.train_df, tokenizer=self.tokenizer, length=self.length),
             num_workers=8, batch_size=self.batch_size, shuffle=True)
 
     def val_dataloader(self):
         return DataLoader(
-            SemevalDataset(self.val_df, tokenizer=self.tokenizer, length=self.length, smoothing=self.smoothing),
+            SemevalDataset(self.val_df, tokenizer=self.tokenizer, length=self.length),
             num_workers=8, batch_size=self.batch_size, shuffle=False)
 
 
 class SemevalDataset(Dataset):
-    def __init__(self, df: pd.DataFrame, tokenizer, length, smoothing=False):
+    def __init__(self, df: pd.DataFrame, tokenizer, length):
         self.df = df
         self.tokenizer = tokenizer
         self.length = length
-        if smoothing:
-            self.pos, self.neg = 0.9, 0.1
-        else:
-            self.pos, self.neg = 1, 0
 
     def __len__(self):
         return len(self.df)
@@ -56,14 +51,14 @@ class SemevalDataset(Dataset):
         encoded = self.tokenizer(row['text'], add_special_tokens=True, padding='max_length', truncation=True,
                                  return_offsets_mapping=True, max_length=self.length)
         encoded['labels'] = np.array([
-            self.pos if any((left <= chr_pos < right for chr_pos in row['spans'])) else self.neg
+            1 if any(left <= chr_pos < right for chr_pos in row['spans']) else 0
             for left, right in encoded['offset_mapping']
         ])
+
         encoded['sentence_id'] = row['sentence_id']
         encoded['offset'] = row['offset']
         # 994 is the longest input, 553 after splitting
         encoded['pad_span'] = np.pad(row['spans'], mode='constant', pad_width=(0, 560 - len(row['spans'])),
                                      constant_values=-1)
-
         item = {k: torch.tensor(v).long() for k, v in encoded.items()}
         return item

@@ -1,4 +1,3 @@
-import csv
 import os
 from configparser import ConfigParser
 from pathlib import Path
@@ -16,9 +15,9 @@ from transformers import BertTokenizerFast, BertForTokenClassification, MobileBe
     XLNetForTokenClassification, XLNetTokenizerFast, RobertaTokenizerFast, ElectraTokenizerFast
 
 from dataset import DatasetModule
-from fill_holes import fill_holes_in_row
 from model import LitModule
-from split_sentences import split_sentence
+from scripts.split_sentences import split_sentence
+from utils import log_predicted_spans
 
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 os.environ['COMET_DISABLE_AUTO_LOGGING'] = '1'
@@ -36,7 +35,6 @@ os.environ['COMET_DISABLE_AUTO_LOGGING'] = '1'
 @click.option('--seed', default=0, type=int)
 @click.option('-bs', '--batch-size', default=32, type=int)
 @click.option('-fdr', '--fast-dev-run', default=False, is_flag=True)
-@click.option('-sm', '--smoothing', default=False, is_flag=True)
 def train(**params):
     params = EasyDict(params)
     seed_everything(params.seed)
@@ -75,7 +73,7 @@ def train(**params):
                                                  output_hidden_states=False)
 
     data_module = DatasetModule(data_dir=params.data_path, tokenizer=tokenizer, batch_size=params.batch_size,
-                                length=params.length, smoothing=params.smoothing)
+                                length=params.length)
     model = LitModule(model=model_backbone, tokenizer=tokenizer, freeze=params.freeze)
 
     trainer = Trainer(logger=logger, max_epochs=params['epochs'], callbacks=callbacks, gpus=1, deterministic=True,
@@ -89,34 +87,10 @@ def train(**params):
 
         best_model = LitModule.load_from_checkpoint(checkpoint_path=model_checkpoint.best_model_path,
                                                     model=model_backbone, tokenizer=tokenizer, freeze=params.freeze)
-        best_model.eval()
-        best_model.cuda()
-        for i, row in data_module.test_df.iterrows():
-            texts, offsets, _ = split_sentence(tokenizer, row['text'], max_sentence_length=params.length)
-            predicted_spans = list()
-            for text, offset in zip(texts, offsets):
-                encoded = tokenizer(text, add_special_tokens=True, padding='max_length', truncation=True,
-                                    return_offsets_mapping=True, max_length=params.length)
-                item = {k: torch.tensor(v).unsqueeze(0).long().cuda() for k, v in encoded.items()}
 
-                output = best_model(item['input_ids'], token_type_ids=None, attention_mask=item['attention_mask'])
-                logits = output.logits.detach().cpu().numpy()
-                y_pred = np.argmax(logits, axis=-1).squeeze().astype(int)
-                predicted_offsets = np.array(encoded['offset_mapping'])[y_pred.astype(bool)]
-                spans = [i for offset in predicted_offsets for i in range(offset[0], offset[1])]
-                spans = np.array(spans) + offset
-                predicted_spans.extend(list(spans))
-            data_module.test_df.loc[i, 'spans'] = str(predicted_spans)
-
-        print(data_module.test_df.head())
-        data_module.test_df = data_module.test_df.drop(columns=['text'])
-        data_module.test_df.to_csv('spans-pred.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='\n')
-        logger.experiment.log_asset('spans-pred.txt')
-
-        data_module.test_df['spans'] = data_module.test_df['spans'].apply(fill_holes_in_row)
-        data_module.test_df.to_csv('spans-pred-filled.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE,
-                                   escapechar='\n')
-        logger.experiment.log_asset('spans-pred-filled.txt')
+        predicted_df = best_model.predict_dataframe(data_module.test_df, params.length)
+        log_predicted_spans(predicted_df, logger)
+        print(predicted_df.head())
 
 
 if __name__ == '__main__':
