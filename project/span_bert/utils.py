@@ -56,6 +56,22 @@ def fill_holes_in_row(spans: str) -> str:
     return str(new_spans)
 
 
+def remove_ones_in_row(spans: str) -> str:
+    sorted_spans = sorted(literal_eval(spans))
+    new_spans = []
+    if sorted_spans and len(sorted_spans) > 1:
+        if sorted_spans[1] - sorted_spans[0] == 1:
+            new_spans.append(sorted_spans[0])
+
+        for i in range(1, len(sorted_spans) - 1):
+            if sorted_spans[i + 1] - sorted_spans[i] == 1 or sorted_spans[i] - sorted_spans[i - 1] == 1:
+                new_spans.append(sorted_spans[i])
+
+        if sorted_spans[-1] - sorted_spans[-2] == 1:
+            new_spans.append(sorted_spans[-1])
+    return str(new_spans)
+
+
 def log_predicted_spans(df, logger):
     df.to_csv('spans-pred.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='\n')
     logger.experiment.log_asset('spans-pred.txt')
@@ -63,3 +79,7 @@ def log_predicted_spans(df, logger):
     df['spans'] = df['spans'].apply(fill_holes_in_row)
     df.to_csv('spans-pred-filled.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='\n')
     logger.experiment.log_asset('spans-pred-filled.txt')
+
+    df['spans'] = df['spans'].apply(remove_ones_in_row)
+    df.to_csv('spans-pred-filled-removed.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='\n')
+    logger.experiment.log_asset('spans-pred-filled-removed.txt')
