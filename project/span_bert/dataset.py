@@ -10,13 +10,14 @@ from torch.utils.data import DataLoader, Dataset
 
 class DatasetModule(pl.LightningDataModule):
 
-    def __init__(self, data_dir: str, tokenizer, batch_size=32, length=512):
+    def __init__(self, data_dir: str, tokenizer, batch_size=32, length=512, augmentation=False):
         super().__init__()
         self.data_dir: Path = Path(data_dir)
         self.tokenizer = tokenizer
         self.batch_size = batch_size
         self.length = length
         self.train_df, self.val_df, self.test_df = None, None, None
+        self.augmentation = augmentation
 
     def prepare_data(self, *args, **kwargs):
         self.train_df = pd.read_csv(str(self.data_dir / f'tsd_train_{str(self.length)}.csv'))
@@ -28,7 +29,7 @@ class DatasetModule(pl.LightningDataModule):
 
     def train_dataloader(self):
         return DataLoader(
-            SemevalDataset(self.train_df, tokenizer=self.tokenizer, length=self.length),
+            SemevalDataset(self.train_df, tokenizer=self.tokenizer, length=self.length, augmentation=self.augmentation),
             num_workers=8, batch_size=self.batch_size, shuffle=True)
 
     def val_dataloader(self):
@@ -38,10 +39,11 @@ class DatasetModule(pl.LightningDataModule):
 
 
 class SemevalDataset(Dataset):
-    def __init__(self, df: pd.DataFrame, tokenizer, length):
+    def __init__(self, df: pd.DataFrame, tokenizer, length, augmentation=False):
         self.df = df
         self.tokenizer = tokenizer
         self.length = length
+        self.augmentation = augmentation
 
     def __len__(self):
         return len(self.df)
@@ -60,5 +62,8 @@ class SemevalDataset(Dataset):
         # 994 is the longest input, 553 after splitting
         encoded['pad_span'] = np.pad(row['spans'], mode='constant', pad_width=(0, 560 - len(row['spans'])),
                                      constant_values=-1)
+
+        if self.augmentation:
+            pass
         item = {k: torch.tensor(v).long() for k, v in encoded.items()}
         return item
