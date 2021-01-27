@@ -1,84 +1,89 @@
 from ast import literal_eval
 from pathlib import Path
+from random import randint, sample
 
 import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader, Dataset
-from tqdm import tqdm
 
 
 class DatasetModule(pl.LightningDataModule):
 
-    def __init__(self, data_dir: str, tokenizer, batch_size=32, max_len=512, cutoff=None):
+    def __init__(self, data_dir: str, tokenizer, batch_size=32, length=512, augmentation=False):
         super().__init__()
         self.data_dir: Path = Path(data_dir)
         self.tokenizer = tokenizer
         self.batch_size = batch_size
-        self.max_length = max_len
-        self.train_df, self.val_df = None, None
-        self.cutoff = cutoff
+        self.length = length
+        self.train_df, self.val_df, self.test_df = None, None, None
+        self.augmentation = augmentation
 
     def prepare_data(self, *args, **kwargs):
-        train_df = pd.read_csv(str(self.data_dir / "tsd_train.csv"))
-        val_df = pd.read_csv(str(self.data_dir / "tsd_trial.csv"))
+        self.train_df = pd.read_csv(str(self.data_dir / f'tsd_train_{str(self.length)}.csv'))
+        self.val_df = pd.read_csv(str(self.data_dir / f'tsd_trial_{str(self.length)}.csv'))
+        self.test_df = pd.read_csv(str(self.data_dir / "tsd_test.csv"))
 
-        self.train_df = self._preprocess_df(train_df)
-        self.val_df = self._preprocess_df(val_df)
-
-        pd.set_option('display.max_columns', 500)
-        print(self.train_df.head())
+        self.train_df.loc[:, 'spans'] = self.train_df['spans'].apply(literal_eval)
+        self.val_df.loc[:, 'spans'] = self.val_df['spans'].apply(literal_eval)
 
     def train_dataloader(self):
-        return DataLoader(SemevalDataset(self.train_df), num_workers=8, batch_size=self.batch_size)
+        return DataLoader(
+            SemevalDataset(self.train_df, tokenizer=self.tokenizer, length=self.length, augmentation=self.augmentation),
+            num_workers=8, batch_size=self.batch_size, shuffle=True)
 
     def val_dataloader(self):
-        return DataLoader(SemevalDataset(self.val_df), num_workers=8, batch_size=self.batch_size)
-
-    def _preprocess_df(self, df):
-        if self.cutoff:
-            df = df.head(self.cutoff)
-        df.loc[:, 'spans'] = df['spans'].apply(literal_eval)
-
-        texts, spans = df.text.values, df.spans
-
-        data_list = list()
-        for sentence, span in tqdm(zip(texts, spans), total=len(texts)):
-            encoded = self.tokenizer(sentence, add_special_tokens=True, padding='max_length',
-                                     return_offsets_mapping=True, max_length=self.max_length)
-            encoded_span = np.array([
-                1 if any((left <= chr_pos < right for chr_pos in span)) else 0
-                for left, right in encoded['offset_mapping']
-            ])
-            tokens = np.array(encoded.encodings[0].tokens)
-            padded_span = np.pad(span, mode='constant', pad_width=(0, 1024 - len(span)),
-                                 constant_values=-1)  # 994 is the longest input
-            data_list.append([sentence, span, padded_span, encoded['input_ids'], encoded['attention_mask'],
-                              encoded['offset_mapping'], encoded_span, tokens])
-
-        result_df = pd.DataFrame(
-            data_list,
-            columns=['raw_text', 'raw_spans', 'pad_raw_spans', 'pad_tokenized_text', 'pad_attention_mask',
-                     'pad_offset_mapping', 'pad_encoded_span', 'pad_tokens']
-        )
-
-        return result_df
+        return DataLoader(
+            SemevalDataset(self.val_df, tokenizer=self.tokenizer, length=self.length),
+            num_workers=8, batch_size=self.batch_size, shuffle=False)
 
 
 class SemevalDataset(Dataset):
-    def __init__(self, df: pd.DataFrame):
+    def __init__(self, df: pd.DataFrame, tokenizer, length, augmentation=False):
         self.df = df
+        self.tokenizer = tokenizer
+        self.length = length
+        self.augmentation = augmentation
 
     def __len__(self):
         return len(self.df)
 
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
-        return {
-            'tokens': torch.tensor(row['pad_tokenized_text']).long(),
-            'attention_mask': torch.tensor(row['pad_attention_mask']).long(),
-            'labels': torch.tensor(row['pad_encoded_span']).long(),
-            'pad_offset_mapping': torch.tensor(row['pad_offset_mapping']).long(),
-            'pad_span': torch.tensor(row['pad_raw_spans']).long()
-        }
+        encoded = self.tokenizer(row['text'], add_special_tokens=True, padding='max_length', truncation=True,
+                                 return_offsets_mapping=True, max_length=self.length)
+        encoded['labels'] = np.array([
+            1 if any(left <= chr_pos < right for chr_pos in row['spans']) else 0
+            for left, right in encoded['offset_mapping']
+        ])
+
+        encoded['sentence_id'] = row['sentence_id']
+        encoded['offset'] = row['offset']
+        # 994 is the longest input, 553 after splitting
+        encoded['pad_span'] = np.pad(row['spans'], mode='constant', pad_width=(0, 560 - len(row['spans'])),
+                                     constant_values=-1)
+
+        item = {k: torch.tensor(v).long() for k, v in encoded.items()}
+
+        if self.augmentation:
+            number_of_tokens = sum(encoded['attention_mask'])
+            indices_list_to_shuffle = list(range(number_of_tokens))
+            number_swaps = int(0.2 * number_of_tokens)
+            for i in range(number_swaps):
+                a = randint(1, number_of_tokens - 2)  # dont swap first and last token!
+                neigh_len = randint(1, 3)
+                symbol = sample([-1, 1], 1)[0]
+                b = a + neigh_len * symbol
+                if 0 <= b <= number_of_tokens - 1 and a != b:
+                    indices_list_to_shuffle[a], indices_list_to_shuffle[b] = indices_list_to_shuffle[b], \
+                                                                             indices_list_to_shuffle[a]
+
+            def swap_with_indices(input_tensor):
+                if len(input_tensor.shape) > 0 and input_tensor.shape[0] == self.length:
+                    input_tensor[:number_of_tokens] = input_tensor[torch.LongTensor(indices_list_to_shuffle)]
+                return input_tensor
+
+            item = {k: swap_with_indices(v) for k, v in item.items()}
+
+        return item
