@@ -69,7 +69,7 @@ class SemevalDataset(Dataset):
         if self.augmentation:
             number_of_tokens = sum(encoded['attention_mask'])
             indices_list_to_shuffle = list(range(number_of_tokens))
-            number_swaps = int(0.2 * number_of_tokens)
+            number_swaps = int(0.5 * number_of_tokens)
             for i in range(number_swaps):
                 a = randint(1, number_of_tokens - 2)  # dont swap first and last token!
                 neigh_len = randint(1, 3)
