@@ -1,5 +1,6 @@
 from ast import literal_eval
 from pathlib import Path
+from random import randint, sample
 
 import numpy as np
 import pandas as pd
@@ -63,7 +64,26 @@ class SemevalDataset(Dataset):
         encoded['pad_span'] = np.pad(row['spans'], mode='constant', pad_width=(0, 560 - len(row['spans'])),
                                      constant_values=-1)
 
-        if self.augmentation:
-            pass
         item = {k: torch.tensor(v).long() for k, v in encoded.items()}
+
+        if self.augmentation:
+            number_of_tokens = sum(encoded['attention_mask'])
+            indices_list_to_shuffle = list(range(number_of_tokens))
+            number_swaps = int(0.2 * number_of_tokens)
+            for i in range(number_swaps):
+                a = randint(1, number_of_tokens - 2)  # dont swap first and last token!
+                neigh_len = randint(1, 3)
+                symbol = sample([-1, 1], 1)[0]
+                b = a + neigh_len * symbol
+                if 0 <= b <= number_of_tokens - 1 and a != b:
+                    indices_list_to_shuffle[a], indices_list_to_shuffle[b] = indices_list_to_shuffle[b], \
+                                                                             indices_list_to_shuffle[a]
+
+            def swap_with_indices(input_tensor):
+                if len(input_tensor.shape) > 0 and input_tensor.shape[0] == self.length:
+                    input_tensor[:number_of_tokens] = input_tensor[torch.LongTensor(indices_list_to_shuffle)]
+                return input_tensor
+
+            item = {k: swap_with_indices(v) for k, v in item.items()}
+
         return item

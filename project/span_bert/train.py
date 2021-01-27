@@ -53,9 +53,8 @@ def train(**params):
         logger.experiment.log_asset_folder('project/span_bert')
         callbacks.append(LearningRateMonitor(logging_interval='epoch'))
 
-    model_checkpoint = ModelCheckpoint(filepath='checkpoints/{epoch:02d}-{f1_spans:.4f}-{f1_spans_sentence:.4f}',
-                                       save_weights_only=True, save_top_k=3, monitor='f1_spans_sentence', mode='max',
-                                       period=1)
+    model_checkpoint = ModelCheckpoint(filepath='checkpoints/{epoch:02d}-{val_loss:.4f}-{f1_spans_sentence:.4f}',
+                                       save_weights_only=True, save_top_k=10, monitor='val_loss', mode='min', period=1)
     callbacks.extend([model_checkpoint])
 
     model_data = {
