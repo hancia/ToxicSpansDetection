@@ -36,6 +36,7 @@ os.environ['COMET_DISABLE_AUTO_LOGGING'] = '1'
 @click.option('-bs', '--batch-size', default=32, type=int)
 @click.option('-fdr', '--fast-dev-run', default=False, is_flag=True)
 @click.option('--augmentation', default=False, is_flag=True)
+@click.option('--valintrain', default=False, is_flag=True)
 def train(**params):
     params = EasyDict(params)
     seed_everything(params.seed)
@@ -73,10 +74,10 @@ def train(**params):
                                                  output_hidden_states=False)
 
     data_module = DatasetModule(data_dir=params.data_path, tokenizer=tokenizer, batch_size=params.batch_size,
-                                length=params.length, augmentation=params.augmentation)
+                                length=params.length, augmentation=params.augmentation, valintrain=params.valintrain)
     model = LitModule(model=model_backbone, tokenizer=tokenizer, freeze=params.freeze)
 
-    trainer = Trainer(logger=logger, max_epochs=params['epochs'], callbacks=callbacks, gpus=1, deterministic=True,
+    trainer = Trainer(logger=logger, max_epochs=params.epochs, callbacks=callbacks, gpus=1, deterministic=True,
                       val_check_interval=0.5, fast_dev_run=params.fast_dev_run)
     trainer.fit(model, datamodule=data_module)
 

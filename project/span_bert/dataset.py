@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, Dataset
 
 class DatasetModule(pl.LightningDataModule):
 
-    def __init__(self, data_dir: str, tokenizer, batch_size=32, length=512, augmentation=False):
+    def __init__(self, data_dir: str, tokenizer, batch_size=32, length=512, augmentation=False, valintrain=False):
         super().__init__()
         self.data_dir: Path = Path(data_dir)
         self.tokenizer = tokenizer
@@ -19,11 +19,15 @@ class DatasetModule(pl.LightningDataModule):
         self.length = length
         self.train_df, self.val_df, self.test_df = None, None, None
         self.augmentation = augmentation
+        self.valintrain = valintrain
 
     def prepare_data(self, *args, **kwargs):
         self.train_df = pd.read_csv(str(self.data_dir / f'tsd_train_{str(self.length)}.csv'))
         self.val_df = pd.read_csv(str(self.data_dir / f'tsd_trial_{str(self.length)}.csv'))
         self.test_df = pd.read_csv(str(self.data_dir / "tsd_test.csv"))
+
+        if self.valintrain:
+            self.train_df = pd.concat([self.train_df, self.val_df])
 
         self.train_df.loc[:, 'spans'] = self.train_df['spans'].apply(literal_eval)
         self.val_df.loc[:, 'spans'] = self.val_df['spans'].apply(literal_eval)
