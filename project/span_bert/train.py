@@ -69,15 +69,13 @@ def train(**params):
     }
     model_class, tokenizer_class, model_name = model_data[params.model]
     tokenizer = tokenizer_class.from_pretrained(model_name, do_lower_case=True)
+    print('shueluder false!!!!!!!!!!!!!!!!!!!!!!!!!!!')
     model_backbone = model_class.from_pretrained(model_name, num_labels=2, output_attentions=False,
                                                  output_hidden_states=False)
-
     data_module = DatasetModule(data_dir=params.data_path, tokenizer=tokenizer, batch_size=params.batch_size,
                                 length=params.length, augmentation=params.augmentation, valintrain=params.valintrain)
-    model = LitModule(model=model_backbone, tokenizer=tokenizer, freeze=params.freeze)
-
-    trainer = Trainer(logger=logger, max_epochs=params.epochs, callbacks=callbacks, gpus=1, deterministic=True,
-                      val_check_interval=0.5, fast_dev_run=params.fast_dev_run)
+    model = LitModule(model=model_backbone, tokenizer=tokenizer, freeze=params.freeze, scheduler=True)
+    trainer = Trainer(logger=logger, max_epochs=params.epochs, callbacks=callbacks, gpus=1, deterministic=True, fast_dev_run=params.fast_dev_run)
     trainer.fit(model, datamodule=data_module)
 
     if params.pseudolabel:
@@ -98,8 +96,7 @@ def train(**params):
                                         length=params.length, augmentation=params.augmentation,
                                         valintrain=params.valintrain, injectdataset=already_labeled)
 
-            trainer = Trainer(logger=logger, max_epochs=params.epochs, callbacks=callbacks, gpus=1, deterministic=True,
-                              val_check_interval=0.5, fast_dev_run=params.fast_dev_run)
+            trainer = Trainer(logger=logger, max_epochs=params.epochs, callbacks=callbacks, gpus=1, deterministic=True, fast_dev_run=params.fast_dev_run)
             trainer.fit(model, datamodule=data_module)
 
     if params.logger:
