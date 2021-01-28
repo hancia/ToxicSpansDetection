@@ -6,7 +6,7 @@ Ortho LSTM: https://github.com/plutasnyy/Interpretable-Attention
 
 BERT: project/span_bert/
 
-SHAP: project/binary_bert/ https://colab.research.google.com/drive/1E1Xav2b2tJUbZ7cVLYxw-Mqu4fafXsdu?usp=sharing
+SHAP: project/binary_bert/ https://colab.research.google.com/drive/1DQVnQp9asCFJFxvONHhV5Fo0xrra13c6?usp=sharing
   
 
 ## How to run   
@@ -25,6 +25,3 @@ apikey = mySecretKey
 projectname = myProjectName
 workspace = workspaceName
 ```
-
-Minimal BERT-SPAN params to locally run:
-`--no-logger --data-path data/spans --name test --data-cutoff 10 --batch-size 1 --epochs 1 --model bert`
