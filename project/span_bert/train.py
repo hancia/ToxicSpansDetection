@@ -83,14 +83,14 @@ def train(**params):
     if params.pseudolabel:
         pseudolabel_data = pd.read_csv('data/civil_comments/all_civil_data_512.csv')
         already_labeled = pd.DataFrame(columns=[*pseudolabel_data.columns, 'spans'])
+        model = LitModule.load_from_checkpoint(checkpoint_path=model_checkpoint.best_model_path, model=model_backbone,
+                                               tokenizer=tokenizer, freeze=params.freeze, lr=2e-5, scheduler=False)
 
         while len(pseudolabel_data) > 0:
-            size_to_label = len(data_module.train_df)
+            size_to_label = min(len(data_module.train_df), len(pseudolabel_data))
             df_subset = pseudolabel_data.sample(size_to_label)
             pseudolabel_data = pseudolabel_data.drop(df_subset.index)
-            model = LitModule.load_from_checkpoint(checkpoint_path=model_checkpoint.best_model_path,
-                                                   model=model_backbone,
-                                                   tokenizer=tokenizer, freeze=params.freeze)
+
             df_subset['spans'] = model.predict_dataframe(df_subset, params.length)
 
             already_labeled = pd.concat([already_labeled, df_subset])
