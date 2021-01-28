@@ -1,3 +1,4 @@
+import os
 from ast import literal_eval
 from pathlib import Path
 from random import randint, sample
@@ -11,7 +12,8 @@ from torch.utils.data import DataLoader, Dataset
 
 class DatasetModule(pl.LightningDataModule):
 
-    def __init__(self, data_dir: str, tokenizer, batch_size=32, length=512, augmentation=False, valintrain=False):
+    def __init__(self, data_dir: str, tokenizer, batch_size=32, length=512, augmentation=False, valintrain=False,
+                 injectdataset=None):
         super().__init__()
         self.data_dir: Path = Path(data_dir)
         self.tokenizer = tokenizer
@@ -20,6 +22,7 @@ class DatasetModule(pl.LightningDataModule):
         self.train_df, self.val_df, self.test_df = None, None, None
         self.augmentation = augmentation
         self.valintrain = valintrain
+        self.injectdataset = injectdataset
 
     def prepare_data(self, *args, **kwargs):
         self.train_df = pd.read_csv(str(self.data_dir / f'tsd_train_{str(self.length)}.csv'))
@@ -28,6 +31,9 @@ class DatasetModule(pl.LightningDataModule):
 
         if self.valintrain:
             self.train_df = pd.concat([self.train_df, self.val_df])
+
+        if self.injectdataset is not None:
+            self.train_df = pd.concat([self.train_df, self.injectdataset])
 
         self.train_df.loc[:, 'spans'] = self.train_df['spans'].apply(literal_eval)
         self.val_df.loc[:, 'spans'] = self.val_df['spans'].apply(literal_eval)

@@ -3,8 +3,7 @@ from configparser import ConfigParser
 from pathlib import Path
 
 import click
-import numpy as np
-import torch
+import pandas as pd
 from easydict import EasyDict
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
@@ -16,7 +15,6 @@ from transformers import BertTokenizerFast, BertForTokenClassification, MobileBe
 
 from dataset import DatasetModule
 from model import LitModule
-from scripts.split_sentences import split_sentence
 from utils import log_predicted_spans
 
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
@@ -37,6 +35,7 @@ os.environ['COMET_DISABLE_AUTO_LOGGING'] = '1'
 @click.option('-fdr', '--fast-dev-run', default=False, is_flag=True)
 @click.option('--augmentation', default=False, is_flag=True)
 @click.option('--valintrain', default=False, is_flag=True)
+@click.option('--pseudolabel', default=False, is_flag=True)
 def train(**params):
     params = EasyDict(params)
     seed_everything(params.seed)
@@ -80,6 +79,28 @@ def train(**params):
     trainer = Trainer(logger=logger, max_epochs=params.epochs, callbacks=callbacks, gpus=1, deterministic=True,
                       val_check_interval=0.5, fast_dev_run=params.fast_dev_run)
     trainer.fit(model, datamodule=data_module)
+
+    if params.pseudolabel:
+        pseudolabel_data = pd.read_csv('data/civil_comments/all_civil_data_512.csv')
+        already_labeled = pd.DataFrame(columns=[*pseudolabel_data.columns, 'spans'])
+
+        while len(pseudolabel_data) > 0:
+            size_to_label = len(data_module.train_df)
+            df_subset = pseudolabel_data.sample(size_to_label)
+            pseudolabel_data = pseudolabel_data.drop(df_subset.index)
+            model = LitModule.load_from_checkpoint(checkpoint_path=model_checkpoint.best_model_path,
+                                                   model=model_backbone,
+                                                   tokenizer=tokenizer, freeze=params.freeze)
+            df_subset['spans'] = model.predict_dataframe(df_subset, params.length)
+
+            already_labeled = pd.concat([already_labeled, df_subset])
+            data_module = DatasetModule(data_dir=params.data_path, tokenizer=tokenizer, batch_size=params.batch_size,
+                                        length=params.length, augmentation=params.augmentation,
+                                        valintrain=params.valintrain, injectdataset=already_labeled)
+
+            trainer = Trainer(logger=logger, max_epochs=params.epochs, callbacks=callbacks, gpus=1, deterministic=True,
+                              val_check_interval=0.5, fast_dev_run=params.fast_dev_run)
+            trainer.fit(model, datamodule=data_module)
 
     if params.logger:
         for absolute_path in model_checkpoint.best_k_models.keys():
