@@ -29,7 +29,8 @@ os.environ['COMET_DISABLE_AUTO_LOGGING'] = '1'
 @click.option('-l', '--length', default=512, type=click.Choice([128, 512]))
 @click.option('--logger/--no-logger', default=True)
 @click.option('-e', '--epochs', default=4, type=int)
-@click.option('-lr', '--epochs', default=None, type=float)
+@click.option('--lr', default=4.7e-5, type=float)
+@click.option('--find-lr', default=False, is_flag=True)
 @click.option('-f', '--freeze', default=0, type=float)
 @click.option('--seed', default=0, type=int)
 @click.option('-bs', '--batch-size', default=32, type=int)
@@ -78,15 +79,14 @@ def train(**params):
     model = LitModule(model=model_backbone, tokenizer=tokenizer, freeze=params.freeze, lr=params.lr)
 
     trainer = Trainer(logger=logger, max_epochs=params.epochs, callbacks=callbacks, gpus=1, deterministic=True,
-                      val_check_interval=0.5, fast_dev_run=params.fast_dev_run)
+                      fast_dev_run=params.fast_dev_run)
 
-    if params.lr is None:
+    if params.find_lr:
         lr_finder = trainer.tuner.lr_find(model, datamodule=data_module)
-        model.lr = lr_finder.suggestion()
+        model.learning_rate = lr_finder.suggestion()
 
-    print(model.lr)
     if params.logger:
-        logger.log_hyperparams({'lr': model.lr})
+        logger.log_hyperparams({'lr': model.learning_rate})
 
     trainer.fit(model, datamodule=data_module)
 

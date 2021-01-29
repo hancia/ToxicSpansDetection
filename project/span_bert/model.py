@@ -16,7 +16,7 @@ from utils import f1_semeval
 
 class LitModule(pl.LightningModule):
 
-    def __init__(self, model, tokenizer, freeze, lr=4.7e-5, *args, **kwargs):
+    def __init__(self, model, tokenizer, freeze, lr, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.model = model
         self.tokenizer = tokenizer
