@@ -115,7 +115,8 @@ def train(**params):
         logger.log_metrics({'best_model_score': model_checkpoint.best_model_score.tolist()})
 
         best_model = LitModule.load_from_checkpoint(checkpoint_path=model_checkpoint.best_model_path,
-                                                    model=model_backbone, tokenizer=tokenizer, freeze=params.freeze)
+                                                    model=model_backbone, tokenizer=tokenizer, freeze=params.freeze,
+                                                    lr=params.lr)
 
         predicted_df = best_model.predict_dataframe(data_module.test_df, params.length)
         log_predicted_spans(predicted_df, logger)
