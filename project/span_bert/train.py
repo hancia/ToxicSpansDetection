@@ -82,7 +82,7 @@ def train(**params):
                       fast_dev_run=params.fast_dev_run)
 
     if params.find_lr:
-        lr_finder = trainer.tuner.lr_find(model, datamodule=data_module)
+        lr_finder = trainer.tuner.lr_find(model, datamodule=data_module, min_lr=1e-5, max_lr=1e-4)
         model.learning_rate = lr_finder.suggestion()
 
     trainer.fit(model, datamodule=data_module)
