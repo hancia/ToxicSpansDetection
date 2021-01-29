@@ -119,7 +119,6 @@ def train(**params):
 
         predicted_df = best_model.predict_dataframe(data_module.test_df, params.length)
         log_predicted_spans(predicted_df, logger)
-        print(predicted_df.head())
 
 
 if __name__ == '__main__':
