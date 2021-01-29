@@ -85,9 +85,6 @@ def train(**params):
         lr_finder = trainer.tuner.lr_find(model, datamodule=data_module)
         model.learning_rate = lr_finder.suggestion()
 
-    if params.logger:
-        logger.log_hyperparams({'lr': model.learning_rate})
-
     trainer.fit(model, datamodule=data_module)
 
     if params.pseudolabel:
