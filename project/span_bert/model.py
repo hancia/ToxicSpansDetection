@@ -20,7 +20,7 @@ class LitModule(pl.LightningModule):
         super().__init__(*args, **kwargs)
         self.model = model
         self.tokenizer = tokenizer
-        self.lr = lr
+        self.learning_rate = lr
         self.scheduler = scheduler
 
         if freeze > 0:
@@ -152,13 +152,13 @@ class LitModule(pl.LightningModule):
         return result
 
     def configure_optimizers(self):
-        optimizer = AdamW(self.model.parameters(), lr=self.lr, eps=1e-8)
+        optimizer = AdamW(self.model.parameters(), lr=self.learning_rate, eps=1e-8)
         result = {
             'optimizer': optimizer,
         }
 
         if self.scheduler:
-            result['lr_scheduler'] = StepLR(optimizer, step_size=1, gamma=0.5)
+            result['lr_scheduler'] = StepLR(optimizer, step_size=1, gamma=0.1)
             result['monitor'] = 'val_loss'
 
         return result
