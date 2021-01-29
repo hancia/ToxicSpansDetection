@@ -16,12 +16,11 @@ from utils import f1_semeval
 
 class LitModule(pl.LightningModule):
 
-    def __init__(self, model, tokenizer, freeze, lr=4e-5, scheduler=True, *args, **kwargs):
+    def __init__(self, model, tokenizer, freeze, lr=4.7e-5, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.model = model
         self.tokenizer = tokenizer
         self.learning_rate = lr
-        self.scheduler = scheduler
 
         if freeze > 0:
             for name, param in self.model.base_model.embeddings.named_parameters():
@@ -153,12 +152,8 @@ class LitModule(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = AdamW(self.model.parameters(), lr=self.learning_rate, eps=1e-8)
-        result = {
+        return {
             'optimizer': optimizer,
+            'lr_scheduler': StepLR(optimizer, step_size=1, gamma=0.1),
+            'monitor': 'val_loss'
         }
-
-        if self.scheduler:
-            result['lr_scheduler'] = StepLR(optimizer, step_size=1, gamma=0.1)
-            result['monitor'] = 'val_loss'
-
-        return result
