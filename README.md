@@ -60,7 +60,7 @@ The notebook contains every necessary data. Example explanation:
 ![IMG](./img/shap.png)
 
 #### Transformers
-The training script is in [project/span_bert/][./project/span_bert/].
+The training script is in [project/span_bert/][./project/span_bert].
 
 
 ### Citation   
