@@ -3,7 +3,7 @@ from ast import literal_eval
 import numpy as np
 import pandas as pd
 
-from Transparency.calculate_threshold import f1, one_hot_to_vec
+from Transparency.calc_threshold_utils import f1, one_hot_to_vec
 
 if __name__ == '__main__':
     trial = pd.read_csv("../data/spans/tsd_train.csv")

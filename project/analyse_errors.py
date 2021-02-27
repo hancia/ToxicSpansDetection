@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from matplotlib.colors import LogNorm, ListedColormap
+from matplotlib.colors import ListedColormap
 from termcolor import colored
 
 sns.set_context('paper', font_scale=1.65)
@@ -34,7 +34,7 @@ def cm_analysis(cm, filename, labels, ax, ymap=None, figsize=(10, 10)):
     for i in range(nrows):
         for j in range(ncols):
             c = cm[i, j]
-            if c==0:
+            if c == 0:
                 annot[i, j] = ''
             else:
                 s = cm_sum[i]
@@ -42,7 +42,7 @@ def cm_analysis(cm, filename, labels, ax, ymap=None, figsize=(10, 10)):
                 if i == j:
                     annot[i, j] = '%.1f%%\n%d/%d' % (p, c, s)
                 else:
-                    annot[i, j] = '%.1f%%\n%d/%d' % (p, c,s)
+                    annot[i, j] = '%.1f%%\n%d/%d' % (p, c, s)
     cm = pd.DataFrame(cm, index=labels, columns=labels)
     cm.index.name = 'Actual'
     cm.columns.name = 'Predicted'
@@ -50,8 +50,8 @@ def cm_analysis(cm, filename, labels, ax, ymap=None, figsize=(10, 10)):
     # fig, ax = plt.subplots(figsize=figsize)
     # sns.heatmap(cm, annot=annot, fmt='', ax=ax, cbar=True, robust=True)
     # sns.heatmap(cm, ax=ax, cbar=False, cmap=ListedColormap(['white']), square=True, linecolor='black', linewidths=1, rasterized=False)
-    sns.heatmap(cm, annot=annot, fmt='', ax=ax, cbar=False, cmap=ListedColormap(['white']), square=True, linecolor='black', linewidths=1, rasterized=False)
-
+    sns.heatmap(cm, annot=annot, fmt='', ax=ax, cbar=False, cmap=ListedColormap(['white']), square=True,
+                linecolor='black', linewidths=1, rasterized=False)
 
 
 def get_confusion_matrix(test_df, preds):
@@ -92,7 +92,9 @@ def get_confusion_matrix(test_df, preds):
                 raise ValueError('error')
         # print(result)
     return _tp, _tn, _fp, _fn
-fig, ax = plt.subplots(ncols=4, figsize=(18,5))
+
+
+fig, ax = plt.subplots(ncols=4, figsize=(18, 5))
 
 ax[0].set_title('OrthoLSTM')
 ax[1].set_title('SHAP')
@@ -102,31 +104,29 @@ ax[3].set_title('Ensemble')
 test_df = pd.read_csv('data/spans/tsd_test_true_spans.csv')
 test_df['spans'] = test_df['spans'].apply(literal_eval)
 
-preds = pd.read_csv('data/spans/lstm_preds.txt', sep='\t', header=None, names=['spans'])
+preds = pd.read_csv('data/spans/preds/lstm_preds.txt', sep='\t', header=None, names=['spans'])
 preds['spans'] = preds['spans'].apply(literal_eval)
 tp, tn, fp, fn = get_confusion_matrix(test_df, preds)
 cm = np.array([[tn, fp], [fn, tp]])
-cm_analysis(cm, 'here2.png', labels=[0, 1],ax=ax[0])
+cm_analysis(cm, 'here2.png', labels=[0, 1], ax=ax[0])
 
-preds = pd.read_csv('data/spans/shap_preds.txt', sep='\t', header=None, names=['spans'])
+preds = pd.read_csv('data/spans/preds/shap_preds.txt', sep='\t', header=None, names=['spans'])
 preds['spans'] = preds['spans'].apply(literal_eval)
 tp, tn, fp, fn = get_confusion_matrix(test_df, preds)
 cm = np.array([[tn, fp], [fn, tp]])
-cm_analysis(cm, 'here2.png', labels=[0, 1],ax=ax[1])
+cm_analysis(cm, 'here2.png', labels=[0, 1], ax=ax[1])
 
-
-preds = pd.read_csv('data/spans/bert_preds.txt', sep='\t', header=None, names=['spans'])
+preds = pd.read_csv('data/spans/preds/bert_preds.txt', sep='\t', header=None, names=['spans'])
 preds['spans'] = preds['spans'].apply(literal_eval)
 tp, tn, fp, fn = get_confusion_matrix(test_df, preds)
 cm = np.array([[tn, fp], [fn, tp]])
-cm_analysis(cm, 'here2.png', labels=[0, 1],ax=ax[2])
+cm_analysis(cm, 'here2.png', labels=[0, 1], ax=ax[2])
 
-preds = pd.read_csv('data/spans/ensemble_preds.txt', sep='\t', header=None, names=['spans'])
+preds = pd.read_csv('data/spans/preds/ensemble_preds.txt', sep='\t', header=None, names=['spans'])
 preds['spans'] = preds['spans'].apply(literal_eval)
 tp, tn, fp, fn = get_confusion_matrix(test_df, preds)
 cm = np.array([[tn, fp], [fn, tp]])
-cm_analysis(cm, 'here2.png', labels=[0, 1],ax=ax[3])
-
+cm_analysis(cm, 'here2.png', labels=[0, 1], ax=ax[3])
 
 fig.tight_layout()
-plt.savefig('here4.png')
+plt.savefig('confusion_matrix.png')

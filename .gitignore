@@ -129,3 +129,4 @@ MNIST
 
 config.ini
 toxicspansdetection/
+checkpoints

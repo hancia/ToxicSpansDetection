@@ -1,14 +1,3 @@
-
-Ortho LSTM: https://github.com/plutasnyy/Interpretable-Attention
-
-BERT: project/span_bert/
-
-SHAP: project/binary_bert/ https://colab.research.google.com/drive/1DQVnQp9asCFJFxvONHhV5Fo0xrra13c6?usp=sharing
-  
-
-
-
-
 <div align="center">    
  
 # Is Explanation All You Need?     
@@ -58,11 +47,20 @@ apikey = mySecretKey
 projectname = myProjectName
 workspace = workspaceName
 ```
+
+The whole CivilComments dataset can be downloaded from [Kaggle](https://www.kaggle.com/c/jigsaw-unintended-bias-in-toxicity-classification/data).
+
 ## Methods
 #### OrthoLSTM
-#### SHAP
-#### Transformers
+LSTM with orthogonalized attention vectors. The implementation from [Interpretable-Attention](https://github.com/akashkm99/Interpretable-Attention) was used and is placed under [project/Transparency](./project/Transparency).
 
+#### SHAP
+SHAP was used to explain the model from [Detoxify](https://github.com/unitaryai/detoxify). Implementation is placed under [./project/binary_bert](./project/binary_bert)
+The notebook contains every necessary data. Example explanation:
+![IMG](./img/shap.png)
+
+#### Transformers
+The training script is in [project/span_bert/][./project/span_bert/].
 
 
 ### Citation   
