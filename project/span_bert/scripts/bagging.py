@@ -19,7 +19,14 @@ def get_dfs(exps):
 
 
 if __name__ == '__main__':
-    dfs = get_dfs(['c0a73a0394364aadb4cf7e7fd9041bcd', 'ab0ed37bc24543888ca59017c30443cb'])
+    dfs = get_dfs([
+        'a825abe773b344748d4bb3f9d813a7ef',
+        '0919538d5186438bb7c7ce58e1a2eb9d',
+        '16afa12678614d9f9add964189b3b27f',
+        '9a817d7bc84d4f39a75553534d0c4062',
+        'e94ed14aeb7647578a667aa855c2295a'
+    ])
+    print(len(dfs))
     result_df = pd.DataFrame({'spans': pd.Series(np.zeros(len(dfs[0]))).values})
 
     for i in tqdm(range(len(dfs[0]))):
@@ -31,12 +38,12 @@ if __name__ == '__main__':
         common_preds = sorted(list(filter(lambda x: pred_dict[x] > len(dfs) / 2, pred_dict)))
         result_df.loc[i, 'spans'] = str(common_preds)
 
-    result_df.to_csv('filled/spans-pred-bagging.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='\n')
+    result_df.to_csv('spans-pred-bagging.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='\n')
 
-    result_df['spans'] = result_df['spans'].apply(fill_holes_in_row)
-    result_df.to_csv('filled/spans-pred-bagging-filled.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE,
-                     escapechar='\n')
-
-    result_df['spans'] = result_df['spans'].apply(remove_ones_in_row)
-    result_df.to_csv('filled/spans-pred-bagging-filled-removed.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE,
-                     escapechar='\n')
+    # result_df['spans'] = result_df['spans'].apply(fill_holes_in_row)
+    # result_df.to_csv('filled/spans-pred-bagging-filled.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE,
+    #                  escapechar='\n')
+    #
+    # result_df['spans'] = result_df['spans'].apply(remove_ones_in_row)
+    # result_df.to_csv('filled/spans-pred-bagging-filled-removed.txt', header=False, sep='\t', quoting=csv.QUOTE_NONE,
+    #                  escapechar='\n')
