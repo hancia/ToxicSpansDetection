@@ -19,7 +19,7 @@ def get_model_and_tokenizer(
 
 def load_binary_bert():
     state_dict = torch.hub.load_state_dict_from_url(
-        "https://github.com/unitaryai/detoxify/releases/download/v0.1-alpha/toxic_original-c1212f89.ckpt")
+        "https://github.com/unitaryai/detoxify/releases/download/v0.1-alpha/toxic_bias-4e693588.ckpt")
 
     class_names = state_dict["config"]["dataset"]["args"]["classes"]
 

@@ -12,8 +12,8 @@ from transformers import BertForTokenClassification, AlbertForTokenClassificatio
     RobertaTokenizerFast, ElectraTokenizerFast, AlbertTokenizerFast, BertTokenizerFast
 
 from dataset import DatasetModule
+from utils import get_api_and_experiment, f1_semeval, fill_holes_in_row, remove_ones_in_row, fill_holes_in_row_three
 from model import LitModule
-from utils import get_api_and_experiment, f1_semeval, fill_holes_in_row, remove_ones_in_row
 
 
 @click.command()
@@ -22,8 +22,8 @@ from utils import get_api_and_experiment, f1_semeval, fill_holes_in_row, remove_
 def validate(experiment, weights_path):
     _, experiment = get_api_and_experiment(experiment)
     model_param = experiment.get_parameters_summary("model")['valueCurrent']
-    length = int(experiment.get_parameters_summary("length")['valueCurrent'])
-
+    # length = int(experiment.get_parameters_summary("length")['valueCurrent'])
+    length=512
     model_data = {
         'bert': [BertForTokenClassification, BertTokenizerFast, 'bert-base-uncased'],
         'albert': [AlbertForTokenClassification, AlbertTokenizerFast, 'albert-base-v2'],
@@ -42,7 +42,7 @@ def validate(experiment, weights_path):
     data_module = DatasetModule(data_dir='data/spans', tokenizer=tokenizer, batch_size=4, length=length)
     data_module.prepare_data()
     # experiment.download_model(name=weights_path, output_path='comet-ml/', expand=True)
-    model = LitModule.load_from_checkpoint(weights_path, model=model_backbone, tokenizer=tokenizer,
+    model = LitModule.load_from_checkpoint(weights_path, model=model_backbone, tokenizer=tokenizer, lr=4.7e-5,
                                            freeze=False)
     model.eval()
     model.cuda()
@@ -72,13 +72,20 @@ def validate(experiment, weights_path):
     f1_semeval_avg = np.array([f1_semeval(result_spans[sentence_id]['true'], result_spans[sentence_id]['pred'])
                                for sentence_id in result_spans])
     print(np.mean(f1_semeval_avg))
-    f1_semeval_avg = np.array([f1_semeval(result_spans[sentence_id]['true'], literal_eval(fill_holes_in_row(str(result_spans[sentence_id]['pred']))))
+    f1_semeval_avg = np.array([f1_semeval(result_spans[sentence_id]['true'],
+                                          literal_eval(fill_holes_in_row(str(result_spans[sentence_id]['pred']))))
                                for sentence_id in result_spans])
     print(np.mean(f1_semeval_avg))
-    f1_semeval_avg = np.array([f1_semeval(result_spans[sentence_id]['true'], literal_eval(remove_ones_in_row(str(result_spans[sentence_id]['pred']))))
+    f1_semeval_avg = np.array([f1_semeval(result_spans[sentence_id]['true'],
+                                          literal_eval(fill_holes_in_row_three(str(result_spans[sentence_id]['pred']))))
                                for sentence_id in result_spans])
     print(np.mean(f1_semeval_avg))
-    f1_semeval_avg = np.array([f1_semeval(result_spans[sentence_id]['true'], literal_eval(remove_ones_in_row(fill_holes_in_row(str(result_spans[sentence_id]['pred'])))))
+    f1_semeval_avg = np.array([f1_semeval(result_spans[sentence_id]['true'],
+                                          literal_eval(remove_ones_in_row(str(result_spans[sentence_id]['pred']))))
+                               for sentence_id in result_spans])
+    print(np.mean(f1_semeval_avg))
+    f1_semeval_avg = np.array([f1_semeval(result_spans[sentence_id]['true'], literal_eval(
+        remove_ones_in_row(fill_holes_in_row(str(result_spans[sentence_id]['pred'])))))
                                for sentence_id in result_spans])
     print(np.mean(f1_semeval_avg))
     #

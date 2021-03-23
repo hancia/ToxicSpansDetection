@@ -25,7 +25,7 @@ def f1_semeval(pred_spans, true_spans):
 
 def get_preds_from_experiment(experiment):
     assets_list = experiment.get_asset_list()
-    spans_asset = list(filter(lambda x: x['fileName'] == 'spans-pred.txt', assets_list))[0]
+    spans_asset = list(filter(lambda x: x['fileName'] == 'spans-pred-filled.txt', assets_list))[0]
     span_id = spans_asset['assetId']
 
     binary_file = experiment.get_asset(span_id, return_type='text')
@@ -55,6 +55,19 @@ def fill_holes_in_row(spans: str) -> str:
         new_spans.append(sorted_spans[-1])
     return str(new_spans)
 
+def fill_holes_in_row_three(spans: str) -> str:
+    sorted_spans = sorted(literal_eval(spans))
+    new_spans = []
+    if sorted_spans and len(sorted_spans) > 1:
+        for i in range(len(sorted_spans) - 1):
+            new_spans.append(sorted_spans[i])
+            if sorted_spans[i + 1] - sorted_spans[i] == 2:
+                new_spans.append(sorted_spans[i] + 1)
+            elif sorted_spans[i + 1] - sorted_spans[i] == 3:
+                new_spans.append(sorted_spans[i] + 1)
+                new_spans.append(sorted_spans[i] + 2)
+        new_spans.append(sorted_spans[-1])
+    return str(new_spans)
 
 def remove_ones_in_row(spans: str) -> str:
     sorted_spans = sorted(literal_eval(spans))

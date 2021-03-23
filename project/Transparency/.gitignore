@@ -1,0 +1,8 @@
+unused_files
+experiments
+*.pyc
+/outputs
+.vector_cache
+outputs
+*civil_dataset.csv
+*vec_civil.p
